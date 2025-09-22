@@ -1,18 +1,8 @@
-from domain.entities.videos.video import Video
-from infrastructure.models.videos.video_model import VideoModel, VideoStatusEnum
+from domain.entities.videos.video import Video, StatusDoVideo
+from infrastructure.mappers.videos.video_mapper import VideoMapper
+from infrastructure.models.videos.video_model import VideoModel
+from infrastructure.repositories.comuns.base_repository import BaseRepository
 
-class VideoRepository:
-    ...
-
-    def add(self, video: Video):
-        model = VideoModel(
-            id=video.id,  # UUID em string
-            title=video.title,
-            source_url=video.source_url,
-            local_path=video.local_path,
-            status=VideoStatusEnum(video.status.value),
-            duration=video.duration,
-            language=video.language
-        )
-        self.session.add(model)
-        self.session.commit()
+class VideoRepository(BaseRepository):
+    def __init__(self, session):
+        super().__init__(session, VideoModel, VideoMapper)

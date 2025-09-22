@@ -8,15 +8,13 @@ USER = "postgres"
 PASSWORD = "masterkey"
 HOST = "localhost"
 PORT = "5432"
-DB_NAME = "viralizai"
+DB_NAME = "ViralizaiAI"
 
-# String de conexão para SQLAlchemy
 DATABASE_URL = f"postgresql+psycopg2://{USER}:{PASSWORD}@{HOST}:{PORT}/{DB_NAME}"
 
 # Base do SQLAlchemy
 Base = declarative_base()
 
-# Função para criar o banco caso não exista
 def create_database_if_not_exists():
     conn = psycopg2.connect(dbname="postgres", user=USER, password=PASSWORD, host=HOST, port=PORT)
     conn.autocommit = True
@@ -31,9 +29,7 @@ def create_database_if_not_exists():
     cursor.close()
     conn.close()
 
-# Cria o banco ao importar este módulo
 create_database_if_not_exists()
 
-# Engine e Session
 engine = create_engine(DATABASE_URL, echo=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

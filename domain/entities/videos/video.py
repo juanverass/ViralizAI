@@ -11,11 +11,11 @@ class StatusDoVideo(Enum):
 
 @dataclass
 class Video:
-    id: str  # armazenaremos o UUID como string
+    id: str
     title: str
     source_url: str
     local_path: Optional[str] = None
-    status: StatusDoVideo = StatusDoVideo.PENDING
+    status: StatusDoVideo = StatusDoVideo.PENDENTE
     duration: Optional[float] = None
     language: str = "pt"
 

@@ -1,12 +1,6 @@
 from sqlalchemy import Column, String, Enum, Float
 from infrastructure.database import Base
-import enum
-
-class StatusDoVideo(Enum):
-    PENDENTE = "Pendente"
-    PROCESSING = "Processando"
-    READY = "pronto"
-    FAILED = "Falhou"
+from domain.entities.videos.video import StatusDoVideo
 
 class VideoModel(Base):
     __tablename__ = "videos"
@@ -15,6 +9,6 @@ class VideoModel(Base):
     title = Column(String, nullable=False)
     source_url = Column(String, nullable=False)
     local_path = Column(String, nullable=True)
-    status = Column(Enum(StatusDoVideo), default=StatusDoVideo.PENDING)
+    status = Column(Enum(StatusDoVideo), default=StatusDoVideo.PENDENTE)
     duration = Column(Float, nullable=True)
     language = Column(String, default="pt-BR")
