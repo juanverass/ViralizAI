@@ -1,29 +1,29 @@
+from fastapi import FastAPI
 from app.services.service_registration_block import ServiceRegistrationBlock
 from infrastructure.database import Base, engine, SessionLocal, create_database_if_not_exists
-from infrastructure.models.videos.video_model import VideoModel
 from infrastructure.repositories.repository_registration_block import RepositoryRegistrationBlock
-from infrastructure.repositories.videos.video_repository import VideoRepository
-from app.services.videos.video_service import VideoService
+from interfaces.api.router_registration_block import RouterRegistrationBlock
 
+# Inicializa banco e tabelas
 def init_db():
-    """Garante banco e tabelas existentes"""
     create_database_if_not_exists()
     Base.metadata.create_all(bind=engine)
-    print("Banco e tabelas prontos!")
+    print("Banco e tabelas estão atualizados!")
 
-def run_app():
-    """Fluxo principal da aplicação"""
-    # Inicializa sessão e repositório
+def create_app() -> FastAPI:
+    app = FastAPI(title="ViralizAI 🚀")
+
     session = SessionLocal()
-    repositorys = RepositoryRegistrationBlock(session)
-    services = ServiceRegistrationBlock(repositorys)
+    repositories = RepositoryRegistrationBlock(session)
+    services = ServiceRegistrationBlock(repositories)
+    
+    app.state.services = services
 
-    # Cria vídeo de teste
-    video = services.video_service.create_video("Meu Primeiro Vídeo", "https://youtu.be/exemplo")
-    print(f"[CRIADO] Vídeo: {video.id} - {video.title} - Status: {video.status.value}")
+    routers = RouterRegistrationBlock()
+    routers.register_all(app)
 
-    session.close()
+    return app
 
-if __name__ == "__main__":
-    init_db()
-    run_app()
+init_db()
+
+app = create_app()

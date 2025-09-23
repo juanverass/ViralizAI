@@ -29,7 +29,5 @@ def create_database_if_not_exists():
     cursor.close()
     conn.close()
 
-create_database_if_not_exists()
-
 engine = create_engine(DATABASE_URL, echo=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
