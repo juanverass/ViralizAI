@@ -259,21 +259,14 @@ git clone <repo-url>
 cd ViralizAI
 ```
 
-2. Crie e ative o ambiente virtual:  
-```bash
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-venv\Scripts\activate     # Windows
-```
-
-3. Instale as dependências:  
+2. Instale as dependências:  
 ```bash
 pip install -r requirements.txt
 ```
 
-4. Rode a aplicação mínima:  
+3. Rode a aplicação mínima:  
 ```bash
-python app/main.py
+python -m uvicorn app.main:app --reload
 ```
 
 ---
