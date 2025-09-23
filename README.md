@@ -92,6 +92,7 @@ ViralizAI/
 
 ## 📌 Exemplo de Entidade: `Video`
 
+1. O desenvolvedor deve criar a entidade, segue o exemplo abaixo de quando criei a entidade Video.
 ```python
 from dataclasses import dataclass
 from enum import Enum
@@ -127,6 +128,7 @@ class Video:
 
 ## 📌 Exemplo de Model e Mapper
 
+2. O desenvolvedor deve criar a Model e o Mapper, segue o exemplo abaixo de quando criei VideoModel e VideoMapper.
 ```python
 # infrastructure/models/videos/video_model.py
 from sqlalchemy import Column, String, Enum, Float
@@ -180,6 +182,7 @@ class VideoMapper:
 
 ## 📌 Exemplo de Repository com Generics
 
+3. Foi criada uma Repository Generica que contem as operações padrões de um CRUD.
 ```python
 # infrastructure/repositories/comuns/base_repository.py
 class BaseRepository:
@@ -208,6 +211,7 @@ class BaseRepository:
         self.session.commit()
 ```
 
+4. Todos os nossos repositórios herdarão de **BaseRepository**.
 ```python
 # infrastructure/repositories/videos/video_repository.py
 from domain.entities.videos.video import Video, StatusDoVideo
@@ -219,7 +223,7 @@ class VideoRepository(BaseRepository):
     def __init__(self, session):
         super().__init__(session, VideoModel, VideoMapper)
 ```
-
+5. Toda vez que for criado um novo repositório, deve-se injetar em **RepositoryRegistrationBlock**.
 ```python
 # infrastructure/repositories/repository_registration_block.py
 from infrastructure.repositories.videos.video_repository import VideoRepository
