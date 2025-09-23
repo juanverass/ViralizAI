@@ -90,7 +90,7 @@ ViralizAI/
 
 ---
 
-## 📌 Exemplo de Entidade: `Video`
+## 📌 Criando Entidade: `Video`
 
 1. O desenvolvedor deve criar a entidade, segue o exemplo abaixo de quando criei a entidade Video.
 ```python
@@ -126,7 +126,7 @@ class Video:
 
 ---
 
-## 📌 Exemplo de Model e Mapper
+## 📌  Model e Mapper
 
 2. O desenvolvedor deve criar a Model e o Mapper, segue o exemplo abaixo de quando criei VideoModel e VideoMapper.
 ```python
@@ -180,7 +180,7 @@ class VideoMapper:
 
 ---
 
-## 📌 Exemplo de Repository com Generics
+## 📌 Repository com Generics
 
 3. Foi criada uma Repository Generica que contem as operações padrões de um CRUD.
 ```python
