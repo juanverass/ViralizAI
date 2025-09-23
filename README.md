@@ -220,6 +220,17 @@ class VideoRepository(BaseRepository):
         super().__init__(session, VideoModel, VideoMapper)
 ```
 
+```python
+# infrastructure/repositories/repository_registration_block.py
+from infrastructure.repositories.videos.video_repository import VideoRepository
+
+class RepositoryRegistrationBlock:
+    def __init__(self, session):
+        self.videos = VideoRepository(session)
+```
+
+
+
 ---
 
 ## 📌 Fluxo de criação de vídeo (Mermaid)
