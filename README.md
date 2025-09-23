@@ -178,7 +178,7 @@ class VideoMapper:
 
 ---
 
-## 📌 Exemplo de Repository
+## 📌 Exemplo de Repository com Generics
 
 ```python
 # infrastructure/repositories/comuns/base_repository.py
@@ -206,6 +206,18 @@ class BaseRepository:
         model_instance = self.mapper.to_model(entity)
         self.session.delete(model_instance)
         self.session.commit()
+```
+
+```python
+# infrastructure/repositories/videos/video_repository.py
+from domain.entities.videos.video import Video, StatusDoVideo
+from infrastructure.mappers.videos.video_mapper import VideoMapper
+from infrastructure.models.videos.video_model import VideoModel
+from infrastructure.repositories.comuns.base_repository import BaseRepository
+
+class VideoRepository(BaseRepository):
+    def __init__(self, session):
+        super().__init__(session, VideoModel, VideoMapper)
 ```
 
 ---
