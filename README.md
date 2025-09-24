@@ -296,13 +296,9 @@ class UsuarioRepository(BaseRepository[Usuario, UsuarioDbMapping], UsuarioReposi
     def __init__(self, session: Session):
         super().__init__(session, UsuarioDbMapping, UsuarioMapper)
     
-    def update_status(self, usuario_id: str, status: StatusUsuario) -> Optional[Usuario]:
-        """Atualiza status de um usuário específico"""
-        usuario = self.get_by_id(usuario_id)
-        if usuario:
-            usuario.status = status
-            return self.update(usuario)
-        return None
+    # ❌ NÃO coloque métodos específicos de negócio aqui!
+    # O Repository deve ser genérico e focado apenas em persistência
+    # Métodos como update_status() pertencem ao Service
 ```
 
 ### 6️⃣ **Criar o App Service**
@@ -335,6 +331,20 @@ O App Service é responsável por:
 > - `add()`, `get_all()`, `get_by_id()`, `update()`, `delete()`
 > - E pode focar apenas nas regras específicas do domínio
 
+> **⚠️ Separação de Responsabilidades:**
+> 
+> **Repository (Infrastructure):**
+> - ✅ Operações genéricas de persistência (CRUD)
+> - ✅ Conversão entre entidade e model
+> - ❌ Regras de negócio específicas
+> - ❌ Validações de domínio
+> 
+> **Service (Application):**
+> - ✅ Regras de negócio e validações
+> - ✅ Orquestração de operações
+> - ✅ Casos de uso específicos
+> - ✅ Aplicação de regras antes de persistir
+
 Crie o arquivo `app/services/usuarios/usuario_service.py`:
 
 ```python
@@ -355,12 +365,32 @@ class UsuarioService(BaseAppService[Usuario]):
         return self.add(usuario)
 
     def block_usuario(self, usuario_id: str) -> Optional[Usuario]:
-        """Bloqueia um usuário"""
-        return self._repository.update_status(usuario_id, StatusUsuario.BLOQUEADO)
+        """Bloqueia um usuário - regra de negócio específica"""
+        usuario = self.get_by_id(usuario_id)
+        if not usuario:
+            return None
+        
+        # Aplicar regra de negócio: só pode bloquear usuário ativo
+        if usuario.status != StatusUsuario.ATIVO:
+            raise ValueError("Apenas usuários ativos podem ser bloqueados")
+        
+        # Alterar status e persistir
+        usuario.status = StatusUsuario.BLOQUEADO
+        return self.update(usuario)
 
     def activate_usuario(self, usuario_id: str) -> Optional[Usuario]:
-        """Ativa um usuário"""
-        return self._repository.update_status(usuario_id, StatusUsuario.ATIVO)
+        """Ativa um usuário - regra de negócio específica"""
+        usuario = self.get_by_id(usuario_id)
+        if not usuario:
+            return None
+        
+        # Aplicar regra de negócio: só pode ativar usuário inativo
+        if usuario.status not in [StatusUsuario.INATIVO, StatusUsuario.BLOQUEADO]:
+            raise ValueError("Apenas usuários inativos ou bloqueados podem ser ativados")
+        
+        # Alterar status e persistir
+        usuario.status = StatusUsuario.ATIVO
+        return self.update(usuario)
 ```
 
 ### 7️⃣ **Criar os Schemas Pydantic**
@@ -652,6 +682,54 @@ HTTP Response ← Controller ← Service ← Repository ← Database
 3. **Relacionamentos**: Implementar relacionamentos entre entidades
 4. **Cache**: Adicionar camada de cache
 5. **Logs**: Implementar logging estruturado
+
+---
+
+## 🎯 **Boas Práticas e Padrões**
+
+### **📋 Onde Colocar Cada Tipo de Código:**
+
+| **Código** | **Onde Colocar** | **Por quê** |
+|------------|------------------|-------------|
+| **Regras de negócio** | Service | Orquestração e validação |
+| **Validações de domínio** | Service | Aplicação de regras antes de persistir |
+| **Operações CRUD** | Repository | Persistência genérica |
+| **Conversões de dados** | Mapper | Isolamento entre camadas |
+| **Endpoints HTTP** | Controller | Interface com o mundo externo |
+| **Validação de entrada** | Schemas | Validação de dados da API |
+
+### **❌ Erros Comuns a Evitar:**
+
+```python
+# ❌ ERRADO: Repository com regras de negócio
+class UsuarioRepository:
+    def block_usuario(self, id):  # Regra de negócio no Repository
+        usuario = self.get_by_id(id)
+        if usuario.status == "ATIVO":  # Validação no Repository
+            usuario.status = "BLOQUEADO"
+            return self.update(usuario)
+
+# ✅ CORRETO: Service com regras de negócio
+class UsuarioService:
+    def block_usuario(self, id):
+        usuario = self.get_by_id(id)
+        if not usuario:
+            return None
+        
+        # Validação de negócio no Service
+        if usuario.status != StatusUsuario.ATIVO:
+            raise ValueError("Apenas usuários ativos podem ser bloqueados")
+        
+        usuario.status = StatusUsuario.BLOQUEADO
+        return self.update(usuario)  # Usa Repository genérico
+```
+
+### **💡 Princípios da Arquitetura Hexagonal:**
+
+1. **Dependency Inversion**: Dependências apontam para o domínio
+2. **Single Responsibility**: Cada classe tem uma responsabilidade
+3. **Interface Segregation**: Interfaces específicas e focadas
+4. **Open/Closed**: Aberto para extensão, fechado para modificação
 
 ---
 
