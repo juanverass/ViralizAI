@@ -2,7 +2,8 @@ from sqlalchemy import Column, String, Enum, Float
 from infrastructure.database import Base
 from domain.entities.videos.video import StatusDoVideo
 
-class VideoModel(Base):
+
+class VideoDbMapping(Base):
     __tablename__ = "videos"
 
     id = Column(String(36), primary_key=True, index=True)
@@ -12,3 +13,5 @@ class VideoModel(Base):
     status = Column(Enum(StatusDoVideo), default=StatusDoVideo.PENDENTE)
     duration = Column(Float, nullable=True)
     language = Column(String, default="pt-BR")
+
+

@@ -90,148 +90,345 @@ ViralizAI/
 
 ---
 
-## 📌 Criando Entidade: `Video`
+## 📌 Tutorial: Criando uma Nova Entidade
 
-1. O desenvolvedor deve criar a entidade, segue o exemplo abaixo de quando criei a entidade Video.
+Este tutorial mostra como criar uma nova entidade seguindo a arquitetura hexagonal do ViralizAI. Usaremos **Usuario** como exemplo.
+
+### 1️⃣ **Criar a Entidade de Domínio**
+
+Crie o arquivo `domain/entities/usuarios/usuario.py`:
+
 ```python
 from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
 import uuid
 
-class StatusDoVideo(Enum):
-    PENDENTE = "Pendente"
-    PROCESSING = "Processando"
-    READY = "Pronto"
-    FAILED = "Falhou"
+class StatusUsuario(Enum):
+    ATIVO = "Ativo"
+    INATIVO = "Inativo"
+    BLOQUEADO = "Bloqueado"
 
 @dataclass
-class Video:
+class Usuario:
     id: str
-    title: str
-    source_url: str
-    local_path: Optional[str] = None
-    status: StatusDoVideo = StatusDoVideo.PENDENTE
-    duration: Optional[float] = None
-    language: str = "pt"
+    nome: str
+    email: str
+    telefone: Optional[str] = None
+    status: StatusUsuario = StatusUsuario.ATIVO
+    data_criacao: Optional[str] = None
 
     @staticmethod
-    def create_new(title: str, source_url: str) -> "Video":
-        return Video(
+    def create_new(nome: str, email: str) -> "Usuario":
+        return Usuario(
             id=str(uuid.uuid4()),
-            title=title,
-            source_url=source_url
+            nome=nome,
+            email=email
         )
 ```
 
----
+### 2️⃣ **Criar o Mapeamento de Banco**
 
-## 📌  Model e Mapper
+Crie o arquivo `infrastructure/models/usuarios/usuario_db_mapping.py`:
 
-2. O desenvolvedor deve criar a Model e o Mapper, segue o exemplo abaixo de quando criei VideoModel e VideoMapper.
 ```python
-# infrastructure/models/videos/video_model.py
-from sqlalchemy import Column, String, Enum, Float
+from sqlalchemy import Column, String, Enum, DateTime
 from infrastructure.database import Base
-from domain.entities.videos.video import StatusDoVideo
+from domain.entities.usuarios.usuario import StatusUsuario
 
-class VideoModel(Base):
-    __tablename__ = "videos"
+class UsuarioDbMapping(Base):
+    __tablename__ = "usuarios"
 
     id = Column(String(36), primary_key=True, index=True)
-    title = Column(String, nullable=False)
-    source_url = Column(String, nullable=False)
-    local_path = Column(String, nullable=True)
-    status = Column(Enum(StatusDoVideo), default=StatusDoVideo.PENDENTE)
-    duration = Column(Float, nullable=True)
-    language = Column(String, default="pt-BR")
+    nome = Column(String, nullable=False)
+    email = Column(String, nullable=False, unique=True)
+    telefone = Column(String, nullable=True)
+    status = Column(Enum(StatusUsuario), default=StatusUsuario.ATIVO)
+    data_criacao = Column(DateTime, nullable=True)
 ```
 
-```python
-# infrastructure/mappers/videos/video_mapper.py
-from domain.entities.videos.video import StatusDoVideo, Video
-from infrastructure.models.videos.video_model import VideoModel
+### 3️⃣ **Criar o Mapper**
 
-class VideoMapper:
+Crie o arquivo `infrastructure/mappers/usuarios/usuario_mapper.py`:
+
+```python
+from domain.entities.usuarios.usuario import StatusUsuario, Usuario
+from infrastructure.models.usuarios.usuario_db_mapping import UsuarioDbMapping
+
+class UsuarioMapper:
     @staticmethod
-    def to_model(entity: Video) -> VideoModel:
-        return VideoModel(
+    def to_model(entity: Usuario) -> UsuarioDbMapping:
+        return UsuarioDbMapping(
             id=entity.id,
-            title=entity.title,
-            source_url=entity.source_url,
-            local_path=entity.local_path,
-            status=StatusDoVideo(entity.status),
-            duration=entity.duration,
-            language=entity.language
+            nome=entity.nome,
+            email=entity.email,
+            telefone=entity.telefone,
+            status=entity.status,
+            data_criacao=entity.data_criacao
         )
 
     @staticmethod
-    def to_entity(model: VideoModel) -> Video:
-        return Video(
+    def to_entity(model: UsuarioDbMapping) -> Usuario:
+        return Usuario(
             id=model.id,
-            title=model.title,
-            source_url=model.source_url,
-            local_path=model.local_path,
-            status=StatusDoVideo(model.status.value),
-            duration=model.duration,
-            language=model.language
+            nome=model.nome,
+            email=model.email,
+            telefone=model.telefone,
+            status=StatusUsuario(model.status.value),
+            data_criacao=model.data_criacao
         )
 ```
 
----
+### 4️⃣ **Criar o Repository Port (Contrato)**
 
-## 📌 Repository com Generics
+Crie o arquivo `domain/repositories/usuario_repository_port.py`:
 
-3. Foi criada uma Repository Generica que contem as operações padrões de um CRUD.
 ```python
-# infrastructure/repositories/comuns/base_repository.py
-class BaseRepository:
-    def __init__(self, session, model, mapper):
-        self.session = session
-        self.model = model
-        self.mapper = mapper
+from typing import Protocol, Optional, List
+from domain.entities.usuarios.usuario import Usuario
 
-    def add(self, entity):
-        model_instance = self.mapper.to_model(entity)
-        self.session.add(model_instance)
-        self.session.commit()
-        return self.mapper.to_entity(model_instance)
-
-    def get_all(self):
-        results = self.session.query(self.model).all()
-        return [self.mapper.to_entity(item) for item in results]
-
-    def get_by_id(self, id_entity):
-        model_instance = self.session.query(self.model).filter_by(id=id_entity).first()
-        return self.mapper.to_entity(model_instance) if model_instance else None
-
-    def delete(self, entity):
-        model_instance = self.mapper.to_model(entity)
-        self.session.delete(model_instance)
-        self.session.commit()
+class UsuarioRepositoryPort(Protocol):
+    """Contrato para repositório de usuários"""
+    
+    def add(self, entity: Usuario) -> Usuario: ...
+    def get_all(self) -> List[Usuario]: ...
+    def get_by_id(self, id_entity: str) -> Optional[Usuario]: ...
+    def update(self, entity: Usuario) -> Usuario: ...
+    def delete(self, entity: Usuario) -> None: ...
+    def delete_by_id(self, id_entity: str) -> None: ...
 ```
 
-4. Todos os nossos repositórios herdarão de **BaseRepository**.
+### 5️⃣ **Criar o Repository (Implementação)**
+
+Crie o arquivo `infrastructure/repositories/usuarios/usuario_repository.py`:
+
 ```python
-# infrastructure/repositories/videos/video_repository.py
-from domain.entities.videos.video import Video, StatusDoVideo
-from infrastructure.mappers.videos.video_mapper import VideoMapper
-from infrastructure.models.videos.video_model import VideoModel
+from typing import Optional
+from sqlalchemy.orm import Session
+from domain.entities.usuarios.usuario import Usuario, StatusUsuario
+from domain.repositories.usuario_repository_port import UsuarioRepositoryPort
+from infrastructure.mappers.usuarios.usuario_mapper import UsuarioMapper
+from infrastructure.models.usuarios.usuario_db_mapping import UsuarioDbMapping
 from infrastructure.repositories.comuns.base_repository import BaseRepository
 
-class VideoRepository(BaseRepository):
-    def __init__(self, session):
-        super().__init__(session, VideoModel, VideoMapper)
+class UsuarioRepository(BaseRepository[Usuario, UsuarioDbMapping], UsuarioRepositoryPort):
+    """Implementação do repositório de usuários usando SQLAlchemy"""
+    
+    def __init__(self, session: Session):
+        super().__init__(session, UsuarioDbMapping, UsuarioMapper)
+    
+    def update_status(self, usuario_id: str, status: StatusUsuario) -> Optional[Usuario]:
+        """Atualiza status de um usuário específico"""
+        usuario = self.get_by_id(usuario_id)
+        if usuario:
+            usuario.status = status
+            return self.update(usuario)
+        return None
 ```
-5. Toda vez que for criado um novo repositório, deve-se injetar em **RepositoryRegistrationBlock**.
+
+### 6️⃣ **Criar o App Service**
+
+Crie o arquivo `app/services/usuarios/usuario_service.py`:
+
 ```python
-# infrastructure/repositories/repository_registration_block.py
+from typing import Optional
+from domain.entities.usuarios.usuario import Usuario, StatusUsuario
+from domain.repositories.usuario_repository_port import UsuarioRepositoryPort
+from app.services.base_app_service import BaseAppService
+
+class UsuarioService(BaseAppService[Usuario]):
+    """Serviço de usuários - casos de uso específicos do domínio"""
+    
+    def __init__(self, repository: UsuarioRepositoryPort):
+        super().__init__(repository)
+
+    def create_usuario(self, nome: str, email: str) -> Usuario:
+        """Cria um novo usuário"""
+        usuario = Usuario.create_new(nome, email)
+        return self.add(usuario)
+
+    def block_usuario(self, usuario_id: str) -> Optional[Usuario]:
+        """Bloqueia um usuário"""
+        return self._repository.update_status(usuario_id, StatusUsuario.BLOQUEADO)
+
+    def activate_usuario(self, usuario_id: str) -> Optional[Usuario]:
+        """Ativa um usuário"""
+        return self._repository.update_status(usuario_id, StatusUsuario.ATIVO)
+```
+
+### 7️⃣ **Criar os Schemas Pydantic**
+
+Crie o arquivo `interfaces/api/schemas/usuario_schemas.py`:
+
+```python
+from typing import Optional
+from pydantic import BaseModel
+from domain.entities.usuarios.usuario import StatusUsuario
+
+class UsuarioCreateRequest(BaseModel):
+    """Schema para criação de usuário"""
+    nome: str
+    email: str
+    telefone: Optional[str] = None
+
+class UsuarioUpdateRequest(BaseModel):
+    """Schema para atualização de usuário"""
+    nome: Optional[str] = None
+    email: Optional[str] = None
+    telefone: Optional[str] = None
+    status: Optional[StatusUsuario] = None
+
+class UsuarioResponse(BaseModel):
+    """Schema para resposta de usuário"""
+    id: str
+    nome: str
+    email: str
+    telefone: Optional[str] = None
+    status: StatusUsuario
+    data_criacao: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+```
+
+### 8️⃣ **Criar o Controller**
+
+Crie o arquivo `interfaces/api/usuario_controller.py`:
+
+```python
+from fastapi import APIRouter, Depends, Request, HTTPException, status
+from typing import List
+from app.services.service_registration_block import ServiceRegistrationBlock
+from app.services.usuarios.usuario_service import UsuarioService
+from interfaces.api.schemas.usuario_schemas import UsuarioCreateRequest, UsuarioUpdateRequest, UsuarioResponse
+from domain.entities.usuarios.usuario import Usuario
+
+router = APIRouter()
+
+def get_services(request: Request) -> ServiceRegistrationBlock:
+    return request.app.state.services
+
+def get_usuario_service(services: ServiceRegistrationBlock = Depends(get_services)) -> UsuarioService:
+    return services.usuario_service
+
+@router.post("", response_model=UsuarioResponse)
+def create_usuario(
+    usuario_data: UsuarioCreateRequest,
+    usuario_service: UsuarioService = Depends(get_usuario_service)
+):
+    """Cria um novo usuário"""
+    return usuario_service.create_usuario(usuario_data.nome, usuario_data.email)
+
+@router.get("", response_model=List[UsuarioResponse])
+def get_all_usuarios(usuario_service: UsuarioService = Depends(get_usuario_service)):
+    """Lista todos os usuários"""
+    return usuario_service.get_all()
+
+@router.get("/{usuario_id}", response_model=UsuarioResponse)
+def get_usuario_by_id(
+    usuario_id: str,
+    usuario_service: UsuarioService = Depends(get_usuario_service)
+):
+    """Busca usuário por ID"""
+    usuario = usuario_service.get_by_id(usuario_id)
+    if not usuario:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuário não encontrado"
+        )
+    return usuario
+
+# Rotas específicas do domínio
+@router.patch("/{usuario_id}/block", response_model=UsuarioResponse)
+def block_usuario(
+    usuario_id: str,
+    usuario_service: UsuarioService = Depends(get_usuario_service)
+):
+    """Bloqueia um usuário"""
+    usuario = usuario_service.block_usuario(usuario_id)
+    if not usuario:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuário não encontrado"
+        )
+    return usuario
+
+@router.patch("/{usuario_id}/activate", response_model=UsuarioResponse)
+def activate_usuario(
+    usuario_id: str,
+    usuario_service: UsuarioService = Depends(get_usuario_service)
+):
+    """Ativa um usuário"""
+    usuario = usuario_service.activate_usuario(usuario_id)
+    if not usuario:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuário não encontrado"
+        )
+    return usuario
+```
+
+### 9️⃣ **Registrar nos Blocks**
+
+**RepositoryRegistrationBlock** (`infrastructure/repositories/repository_registration_block.py`):
+```python
 from infrastructure.repositories.videos.video_repository import VideoRepository
+from infrastructure.repositories.usuarios.usuario_repository import UsuarioRepository
 
 class RepositoryRegistrationBlock:
     def __init__(self, session):
         self.videos = VideoRepository(session)
+        self.usuarios = UsuarioRepository(session)
 ```
+
+**ServiceRegistrationBlock** (`app/services/service_registration_block.py`):
+```python
+from app.services.videos.video_service import VideoService
+from app.services.usuarios.usuario_service import UsuarioService
+from infrastructure.repositories.repository_registration_block import RepositoryRegistrationBlock
+
+class ServiceRegistrationBlock:
+    def __init__(self, repositories: RepositoryRegistrationBlock):
+        self.video_service = VideoService(repositories.videos)
+        self.usuario_service = UsuarioService(repositories.usuarios)
+```
+
+**RouterRegistrationBlock** (`interfaces/api/router_registration_block.py`):
+```python
+from fastapi import FastAPI
+from interfaces.api import video_controller, usuario_controller
+
+class RouterRegistrationBlock:
+    def __init__(self):
+        self.routers = [
+            (video_controller.router, "/videos", ["Vídeos"]),
+            (usuario_controller.router, "/usuarios", ["Usuários"]),
+        ]
+
+    def register_all(self, app: FastAPI):
+        for router, prefix, tags in self.routers:
+            app.include_router(router, prefix=prefix, tags=tags)
+```
+
+### ✅ **Resultado Final**
+
+Após seguir este tutorial, você terá:
+
+- **Entidade**: `Usuario` com regras de domínio
+- **Mapeamento**: `UsuarioDbMapping` para persistência
+- **Repository**: `UsuarioRepository` com CRUD completo
+- **Service**: `UsuarioService` com casos de uso
+- **Controller**: Endpoints REST completos
+- **Schemas**: Validação de entrada/saída
+
+**Endpoints disponíveis:**
+- `POST /usuarios` - Criar usuário
+- `GET /usuarios` - Listar todos
+- `GET /usuarios/{id}` - Buscar por ID
+- `PATCH /usuarios/{id}/block` - Bloquear usuário
+- `PATCH /usuarios/{id}/activate` - Ativar usuário
+
+---
 
 
 
