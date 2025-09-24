@@ -728,6 +728,40 @@ class UsuarioService:
 3. **Interface Segregation**: Interfaces específicas e focadas
 4. **Open/Closed**: Aberto para extensão, fechado para modificação
 
+### **🎯 Padrão de Controller Recomendado:**
+
+```python
+# ✅ CORRETO: Controller organizado com seções claras
+router = APIRouter()
+
+# ===== CRUD PADRÃO (herdado do BaseAppService) =====
+@router.get("", response_model=List[EntityResponse])
+def get_all_entities(service: EntityService = Depends(get_service)):
+    return service.get_all()
+
+@router.get("/{id}", response_model=EntityResponse)
+def get_entity_by_id(id: str, service: EntityService = Depends(get_service)):
+    entity = service.get_by_id(id)
+    if not entity:
+        raise HTTPException(status_code=404, detail="Entity not found")
+    return entity
+
+# ===== CASOS DE USO ESPECÍFICOS =====
+@router.post("", response_model=EntityResponse)
+def create_entity(data: CreateRequest, service: EntityService = Depends(get_service)):
+    return service.create_entity(data.field1, data.field2)
+
+@router.patch("/{id}/specific-action", response_model=EntityResponse)
+def specific_action(id: str, service: EntityService = Depends(get_service)):
+    return service.specific_business_action(id)
+```
+
+**Benefícios desta abordagem:**
+- **Organização**: CRUD padrão separado dos casos específicos
+- **Reutilização**: Aproveita métodos herdados do BaseAppService
+- **Clareza**: Fácil identificar o que é padrão vs específico
+- **Manutenção**: Mudanças no BaseAppService afetam todos os controllers
+
 ---
 
 ---
