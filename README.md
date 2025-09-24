@@ -251,8 +251,7 @@ class UsuarioRepositoryPort(Protocol):
     def get_all(self) -> List[Usuario]: ...
     def get_by_id(self, id_entity: str) -> Optional[Usuario]: ...
     def update(self, entity: Usuario) -> Usuario: ...
-    def delete(self, entity: Usuario) -> None: ...
-    def delete_by_id(self, id_entity: str) -> None: ...
+    def delete(self, id_entity: str) -> None: ...
 ```
 
 ### 5️⃣ **Criar o Repository (Implementação)**
@@ -454,7 +453,7 @@ class UsuarioResponse(BaseModel):
 > **🎯 Objetivo**: Criar os endpoints REST que expõem a funcionalidade via HTTP.
 
 O Controller é responsável por:
-- **Endpoints**: Definir rotas HTTP (GET, POST, PUT, DELETE, PATCH)
+- **Endpoints**: Definir rotas HTTP (GET, POST, PUT, DELETE)
 - **Validação**: Usar schemas Pydantic para validar entrada
 - **Tratamento**: Converter erros de domínio em respostas HTTP
 - **Documentação**: Gerar documentação automática (Swagger)
@@ -464,7 +463,6 @@ O Controller é responsável por:
 > ```
 > UsuarioController
 > ├── Endpoints CRUD padrão        # GET, POST, PUT, DELETE
-> ├── Endpoints específicos        # PATCH para ações do domínio
 > ├── Validação de entrada         # Schemas Pydantic
 > ├── Tratamento de erros         # HTTPException
 > └── Injeção de dependência      # Service via FastAPI Depends
@@ -477,7 +475,6 @@ O Controller é responsável por:
 > - **GET /usuarios/{id}**: Buscar usuário específico
 > - **PUT /usuarios/{id}**: Atualizar usuário completo
 > - **DELETE /usuarios/{id}**: Remover usuário
-> - **PATCH /usuarios/{id}/block**: Ação específica do domínio
 
 > **🔧 Injeção de Dependência:**
 > 
@@ -532,7 +529,7 @@ def get_usuario_by_id(
     return usuario
 
 # Rotas específicas do domínio
-@router.patch("/{usuario_id}/block", response_model=UsuarioResponse)
+@router.put("/{usuario_id}/block", response_model=UsuarioResponse)
 def block_usuario(
     usuario_id: str,
     usuario_service: UsuarioService = Depends(get_usuario_service)
@@ -546,7 +543,7 @@ def block_usuario(
         )
     return usuario
 
-@router.patch("/{usuario_id}/activate", response_model=UsuarioResponse)
+@router.put("/{usuario_id}/activate", response_model=UsuarioResponse)
 def activate_usuario(
     usuario_id: str,
     usuario_service: UsuarioService = Depends(get_usuario_service)
@@ -643,8 +640,8 @@ Após seguir este tutorial, você terá:
 - `POST /usuarios` - Criar usuário
 - `GET /usuarios` - Listar todos
 - `GET /usuarios/{id}` - Buscar por ID
-- `PATCH /usuarios/{id}/block` - Bloquear usuário
-- `PATCH /usuarios/{id}/activate` - Ativar usuário
+- `PUT /usuarios/{id}/block` - Bloquear usuário
+- `PUT /usuarios/{id}/activate` - Ativar usuário
 
 ---
 
@@ -663,7 +660,7 @@ Após seguir este tutorial, você terá:
 
 ```
 HTTP Request → Controller → Service → Repository → Database
-     ↓              ↓         ↓          ↓
+                                                       ↓
 HTTP Response ← Controller ← Service ← Repository ← Database
 ```
 
@@ -732,22 +729,6 @@ class UsuarioService:
 4. **Open/Closed**: Aberto para extensão, fechado para modificação
 
 ---
-
-
-
----
-
-## 📌 Fluxo de criação de vídeo (Mermaid)
-
-```mermaid
-flowchart TD
-    A[Interface: POST /videos] --> B[Service: VideoService.create_video]
-    B --> C[Repository: VideoRepository.add]
-    C --> D[Database: VideoModel insert]
-    D --> C
-    C --> B
-    B --> A[Retorna Video criado]
-```
 
 ---
 
