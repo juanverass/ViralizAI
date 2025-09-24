@@ -94,7 +94,23 @@ ViralizAI/
 
 Este tutorial mostra como criar uma nova entidade seguindo a arquitetura hexagonal do ViralizAI. Usaremos **Usuario** como exemplo.
 
+> **💡 O que é Arquitetura Hexagonal?**
+> 
+> A arquitetura hexagonal (também conhecida como Ports and Adapters) separa o código em camadas bem definidas:
+> - **Domain**: Regras de negócio puras (entidades, enums, contratos)
+> - **Application**: Casos de uso e orquestração (services)
+> - **Infrastructure**: Implementações técnicas (banco, APIs externas)
+> - **Interfaces**: Pontos de entrada (API REST, CLI, etc.)
+
 ### 1️⃣ **Criar a Entidade de Domínio**
+
+> **🎯 Objetivo**: Criar a entidade que representa o conceito de negócio no domínio.
+
+A entidade de domínio é o coração da aplicação. Ela contém:
+- **Dados**: Propriedades da entidade
+- **Regras**: Validações e comportamentos
+- **Enums**: Estados possíveis
+- **Factory Methods**: Métodos para criar instâncias
 
 Crie o arquivo `domain/entities/usuarios/usuario.py`:
 
@@ -129,6 +145,16 @@ class Usuario:
 
 ### 2️⃣ **Criar o Mapeamento de Banco**
 
+> **🎯 Objetivo**: Criar a representação da entidade no banco de dados.
+
+O mapeamento de banco é responsável por:
+- **Estrutura**: Definir como a entidade é armazenada no banco
+- **Tipos**: Mapear tipos Python para tipos SQL
+- **Constraints**: Definir regras de integridade (unique, nullable, etc.)
+- **Relacionamentos**: Chaves estrangeiras e associações
+
+> **⚠️ Importante**: Esta camada está na **Infrastructure** porque depende de tecnologia específica (SQLAlchemy).
+
 Crie o arquivo `infrastructure/models/usuarios/usuario_db_mapping.py`:
 
 ```python
@@ -148,6 +174,21 @@ class UsuarioDbMapping(Base):
 ```
 
 ### 3️⃣ **Criar o Mapper**
+
+> **🎯 Objetivo**: Criar a ponte entre a entidade de domínio e o mapeamento de banco.
+
+O mapper é responsável por:
+- **Conversão**: Transformar entidade ↔ model de banco
+- **Isolamento**: Manter domínio independente da tecnologia de persistência
+- **Mapeamento**: Garantir que todos os campos sejam convertidos corretamente
+- **Bidirecional**: Funciona nos dois sentidos (to_model e to_entity)
+
+> **💡 Por que precisamos do Mapper?**
+> 
+> O domínio não deve conhecer detalhes de implementação. O mapper permite que:
+> - A entidade permaneça "pura" (sem dependências de SQLAlchemy)
+> - Possamos trocar de ORM sem afetar o domínio
+> - O código seja mais testável e flexível
 
 Crie o arquivo `infrastructure/mappers/usuarios/usuario_mapper.py`:
 
@@ -181,6 +222,22 @@ class UsuarioMapper:
 
 ### 4️⃣ **Criar o Repository Port (Contrato)**
 
+> **🎯 Objetivo**: Definir o contrato que o repositório deve implementar.
+
+O Repository Port é um **contrato** que define:
+- **Interface**: Quais operações o repositório deve oferecer
+- **Assinaturas**: Tipos de entrada e saída de cada método
+- **Independência**: O domínio não conhece a implementação
+
+> **💡 O que é um Port?**
+> 
+> Um "Port" é como uma interface em C# - define **o que** fazer, não **como** fazer.
+> - O domínio define os contratos (Ports)
+> - A infraestrutura implementa os contratos (Adapters)
+> - Isso permite trocar implementações sem afetar o domínio
+
+> **🔧 Protocol vs Interface**: Em Python, usamos `Protocol` que funciona como interface, mas com duck typing.
+
 Crie o arquivo `domain/repositories/usuario_repository_port.py`:
 
 ```python
@@ -199,6 +256,28 @@ class UsuarioRepositoryPort(Protocol):
 ```
 
 ### 5️⃣ **Criar o Repository (Implementação)**
+
+> **🎯 Objetivo**: Implementar o contrato do repositório usando SQLAlchemy.
+
+O Repository é a **implementação concreta** que:
+- **Herda**: Do `BaseRepository` genérico (CRUD automático)
+- **Implementa**: O Protocol definido no domínio
+- **Usa**: SQLAlchemy para persistência
+- **Mapeia**: Entre entidade e model via mapper
+
+> **🏗️ Arquitetura do Repository:**
+> 
+> ```
+> UsuarioRepository
+> ├── BaseRepository[Usuario, UsuarioDbMapping]  # CRUD genérico
+> └── UsuarioRepositoryPort                       # Contrato do domínio
+> ```
+> 
+> **Benefícios:**
+> - **CRUD automático**: Herda operações básicas do BaseRepository
+> - **Type Safety**: Type hints garantem tipos corretos
+> - **Flexibilidade**: Pode adicionar métodos específicos
+> - **Testabilidade**: Fácil de mockar para testes
 
 Crie o arquivo `infrastructure/repositories/usuarios/usuario_repository.py`:
 
@@ -227,6 +306,34 @@ class UsuarioRepository(BaseRepository[Usuario, UsuarioDbMapping], UsuarioReposi
 ```
 
 ### 6️⃣ **Criar o App Service**
+
+> **🎯 Objetivo**: Criar a camada de casos de uso que orquestra as operações de negócio.
+
+O App Service é responsável por:
+- **Casos de Uso**: Implementar regras de negócio específicas
+- **Orquestração**: Coordenar entre repositório e domínio
+- **Validação**: Aplicar regras de negócio antes de persistir
+- **Transações**: Garantir consistência das operações
+
+> **🏗️ Arquitetura do Service:**
+> 
+> ```
+> UsuarioService
+> ├── BaseAppService[Usuario]           # CRUD padrão herdado
+> └── Métodos específicos do domínio    # Regras de negócio
+> ```
+> 
+> **Benefícios:**
+> - **Herança**: Acesso automático a operações CRUD básicas
+> - **Especialização**: Métodos específicos para o domínio
+> - **Injeção**: Recebe repositório via Protocol (testável)
+> - **Separação**: Casos de uso isolados da infraestrutura
+
+> **💡 Por que herdar de BaseAppService?**
+> 
+> Evita duplicação de código. O service herda automaticamente:
+> - `add()`, `get_all()`, `get_by_id()`, `update()`, `delete()`
+> - E pode focar apenas nas regras específicas do domínio
 
 Crie o arquivo `app/services/usuarios/usuario_service.py`:
 
@@ -257,6 +364,27 @@ class UsuarioService(BaseAppService[Usuario]):
 ```
 
 ### 7️⃣ **Criar os Schemas Pydantic**
+
+> **🎯 Objetivo**: Definir a estrutura de dados para entrada e saída da API.
+
+Os Schemas Pydantic são responsáveis por:
+- **Validação**: Garantir que os dados recebidos estão corretos
+- **Serialização**: Converter entre JSON e objetos Python
+- **Documentação**: Gerar automaticamente a documentação da API
+- **Type Safety**: Garantir tipos corretos em tempo de execução
+
+> **📋 Tipos de Schema:**
+> 
+> - **CreateRequest**: Dados necessários para criar uma entidade
+> - **UpdateRequest**: Dados opcionais para atualizar (todos os campos opcionais)
+> - **Response**: Estrutura de resposta da API (pode incluir campos calculados)
+
+> **💡 Por que separar em schemas diferentes?**
+> 
+> - **Segurança**: Evita exposição de campos internos
+> - **Flexibilidade**: Diferentes endpoints podem ter diferentes estruturas
+> - **Validação**: Regras específicas para cada operação
+> - **Evolução**: Mudanças em um schema não afetam outros
 
 Crie o arquivo `interfaces/api/schemas/usuario_schemas.py`:
 
@@ -292,6 +420,41 @@ class UsuarioResponse(BaseModel):
 ```
 
 ### 8️⃣ **Criar o Controller**
+
+> **🎯 Objetivo**: Criar os endpoints REST que expõem a funcionalidade via HTTP.
+
+O Controller é responsável por:
+- **Endpoints**: Definir rotas HTTP (GET, POST, PUT, DELETE, PATCH)
+- **Validação**: Usar schemas Pydantic para validar entrada
+- **Tratamento**: Converter erros de domínio em respostas HTTP
+- **Documentação**: Gerar documentação automática (Swagger)
+
+> **🏗️ Estrutura do Controller:**
+> 
+> ```
+> UsuarioController
+> ├── Endpoints CRUD padrão        # GET, POST, PUT, DELETE
+> ├── Endpoints específicos        # PATCH para ações do domínio
+> ├── Validação de entrada         # Schemas Pydantic
+> ├── Tratamento de erros         # HTTPException
+> └── Injeção de dependência      # Service via FastAPI Depends
+> ```
+
+> **💡 Padrões de Endpoint:**
+> 
+> - **POST /usuarios**: Criar novo usuário
+> - **GET /usuarios**: Listar todos os usuários
+> - **GET /usuarios/{id}**: Buscar usuário específico
+> - **PUT /usuarios/{id}**: Atualizar usuário completo
+> - **DELETE /usuarios/{id}**: Remover usuário
+> - **PATCH /usuarios/{id}/block**: Ação específica do domínio
+
+> **🔧 Injeção de Dependência:**
+> 
+> O FastAPI usa `Depends()` para injetar o service automaticamente:
+> - **Testabilidade**: Fácil de mockar em testes
+> - **Reutilização**: Mesmo service usado em múltiplos endpoints
+> - **Configuração**: Centralizada no `main.py`
 
 Crie o arquivo `interfaces/api/usuario_controller.py`:
 
@@ -370,6 +533,31 @@ def activate_usuario(
 
 ### 9️⃣ **Registrar nos Blocks**
 
+> **🎯 Objetivo**: Conectar todas as peças da arquitetura através da injeção de dependência.
+
+Os Registration Blocks são responsáveis por:
+- **Configuração**: Centralizar a criação de todas as dependências
+- **Injeção**: Conectar repositórios → services → controllers
+- **Singleton**: Garantir que as mesmas instâncias sejam reutilizadas
+- **Ordem**: Definir a sequência correta de criação
+
+> **🏗️ Fluxo de Injeção:**
+> 
+> ```
+> main.py
+> ├── SessionLocal()                    # Conexão com banco
+> ├── RepositoryRegistrationBlock       # Cria repositórios
+> ├── ServiceRegistrationBlock          # Cria services (recebe repositórios)
+> └── RouterRegistrationBlock          # Registra rotas
+> ```
+
+> **💡 Por que usar Registration Blocks?**
+> 
+> - **Organização**: Cada camada tem seu próprio bloco
+> - **Manutenção**: Fácil adicionar/remover dependências
+> - **Testabilidade**: Fácil de mockar para testes
+> - **Flexibilidade**: Pode trocar implementações facilmente
+
 **RepositoryRegistrationBlock** (`infrastructure/repositories/repository_registration_block.py`):
 ```python
 from infrastructure.repositories.videos.video_repository import VideoRepository
@@ -427,6 +615,43 @@ Após seguir este tutorial, você terá:
 - `GET /usuarios/{id}` - Buscar por ID
 - `PATCH /usuarios/{id}/block` - Bloquear usuário
 - `PATCH /usuarios/{id}/activate` - Ativar usuário
+
+---
+
+## 🎓 **Resumo da Arquitetura Hexagonal**
+
+### **📋 Camadas e Responsabilidades:**
+
+| Camada | Responsabilidade | Exemplo |
+|--------|------------------|---------|
+| **Domain** | Regras de negócio puras | `Usuario`, `StatusUsuario`, `UsuarioRepositoryPort` |
+| **Application** | Casos de uso e orquestração | `UsuarioService` |
+| **Infrastructure** | Implementações técnicas | `UsuarioRepository`, `UsuarioDbMapping`, `UsuarioMapper` |
+| **Interfaces** | Pontos de entrada | `UsuarioController`, `UsuarioSchemas` |
+
+### **🔄 Fluxo de Dados:**
+
+```
+HTTP Request → Controller → Service → Repository → Database
+     ↓              ↓         ↓          ↓
+HTTP Response ← Controller ← Service ← Repository ← Database
+```
+
+### **💡 Benefícios Alcançados:**
+
+- **Testabilidade**: Cada camada pode ser testada independentemente
+- **Flexibilidade**: Fácil trocar implementações (ex: SQLAlchemy → MongoDB)
+- **Manutenibilidade**: Código organizado e responsabilidades claras
+- **Escalabilidade**: Fácil adicionar novas funcionalidades
+- **Reutilização**: BaseRepository e BaseAppService para qualquer entidade
+
+### **🚀 Próximos Passos:**
+
+1. **Testes**: Criar testes unitários para cada camada
+2. **Validações**: Adicionar validações de negócio mais complexas
+3. **Relacionamentos**: Implementar relacionamentos entre entidades
+4. **Cache**: Adicionar camada de cache
+5. **Logs**: Implementar logging estruturado
 
 ---
 
