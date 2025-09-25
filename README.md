@@ -492,6 +492,7 @@ from app.services.service_registration_block import ServiceRegistrationBlock
 from app.services.usuarios.usuario_service import UsuarioService
 from interfaces.api.schemas.usuario_schemas import UsuarioCreateRequest, UsuarioUpdateRequest, UsuarioResponse
 from domain.entities.usuarios.usuario import Usuario
+from interfaces.api.base_controller import BaseController
 
 router = APIRouter()
 
@@ -501,61 +502,55 @@ def get_services(request: Request) -> ServiceRegistrationBlock:
 def get_usuario_service(services: ServiceRegistrationBlock = Depends(get_services)) -> UsuarioService:
     return services.usuario_service
 
-@router.post("", response_model=UsuarioResponse)
-def create_usuario(
-    usuario_data: UsuarioCreateRequest,
-    usuario_service: UsuarioService = Depends(get_usuario_service)
-):
-    """Cria um novo usuário"""
-    return usuario_service.create_usuario(usuario_data.nome, usuario_data.email)
+# ===== HERANÇA DO BASE CONTROLLER =====
+class UsuarioController(BaseController[Usuario, UsuarioService]):
+    """Controller de usuários com herança do BaseController"""
+    
+    def __init__(self):
+        super().__init__(router, get_usuario_service(), "Usuário")
+        self._register_specific_routes()
+    
+    def _register_specific_routes(self):
+        """Registra rotas específicas do domínio de usuários"""
+        
+        @self.router.post("", response_model=UsuarioResponse)
+        def create_usuario(
+            usuario_data: UsuarioCreateRequest,
+            usuario_service: UsuarioService = Depends(get_usuario_service)
+        ):
+            """Cria um novo usuário"""
+            return usuario_service.create_usuario(usuario_data.nome, usuario_data.email)
+        
+        @self.router.patch("/{usuario_id}/block", response_model=UsuarioResponse)
+        def block_usuario(
+            usuario_id: str,
+            usuario_service: UsuarioService = Depends(get_usuario_service)
+        ):
+            """Bloqueia um usuário"""
+            usuario = usuario_service.block_usuario(usuario_id)
+            if not usuario:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Usuário não encontrado"
+                )
+            return usuario
 
-@router.get("", response_model=List[UsuarioResponse])
-def get_all_usuarios(usuario_service: UsuarioService = Depends(get_usuario_service)):
-    """Lista todos os usuários"""
-    return usuario_service.get_all()
+        @self.router.patch("/{usuario_id}/activate", response_model=UsuarioResponse)
+        def activate_usuario(
+            usuario_id: str,
+            usuario_service: UsuarioService = Depends(get_usuario_service)
+        ):
+            """Ativa um usuário"""
+            usuario = usuario_service.activate_usuario(usuario_id)
+            if not usuario:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Usuário não encontrado"
+                )
+            return usuario
 
-@router.get("/{usuario_id}", response_model=UsuarioResponse)
-def get_usuario_by_id(
-    usuario_id: str,
-    usuario_service: UsuarioService = Depends(get_usuario_service)
-):
-    """Busca usuário por ID"""
-    usuario = usuario_service.get_by_id(usuario_id)
-    if not usuario:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Usuário não encontrado"
-        )
-    return usuario
-
-# Rotas específicas do domínio
-@router.put("/{usuario_id}/block", response_model=UsuarioResponse)
-def block_usuario(
-    usuario_id: str,
-    usuario_service: UsuarioService = Depends(get_usuario_service)
-):
-    """Bloqueia um usuário"""
-    usuario = usuario_service.block_usuario(usuario_id)
-    if not usuario:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Usuário não encontrado"
-        )
-    return usuario
-
-@router.put("/{usuario_id}/activate", response_model=UsuarioResponse)
-def activate_usuario(
-    usuario_id: str,
-    usuario_service: UsuarioService = Depends(get_usuario_service)
-):
-    """Ativa um usuário"""
-    usuario = usuario_service.activate_usuario(usuario_id)
-    if not usuario:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Usuário não encontrado"
-        )
-    return usuario
+# Instanciar o controller para registrar as rotas
+usuario_controller = UsuarioController()
 ```
 
 ### 9️⃣ **Registrar nos Blocks**
@@ -728,39 +723,48 @@ class UsuarioService:
 3. **Interface Segregation**: Interfaces específicas e focadas
 4. **Open/Closed**: Aberto para extensão, fechado para modificação
 
-### **🎯 Padrão de Controller Recomendado:**
+### **🎯 Padrão de Controller com Herança:**
 
 ```python
-# ✅ CORRETO: Controller organizado com seções claras
-router = APIRouter()
+# ✅ CORRETO: Controller com herança real do BaseController
+class EntityController(BaseController[Entity, EntityService]):
+    """Controller com herança do BaseController"""
+    
+    def __init__(self):
+        super().__init__(router, get_entity_service(), "Entidade")
+        self._register_specific_routes()
+    
+    def _register_specific_routes(self):
+        """Registra rotas específicas do domínio"""
+        
+        @self.router.post("", response_model=EntityResponse)
+        def create_entity(data: CreateRequest, service: EntityService = Depends(get_service)):
+            return service.create_entity(data.field1, data.field2)
 
-# ===== CRUD PADRÃO (herdado do BaseAppService) =====
-@router.get("", response_model=List[EntityResponse])
-def get_all_entities(service: EntityService = Depends(get_service)):
-    return service.get_all()
+        @self.router.patch("/{id}/specific-action", response_model=EntityResponse)
+        def specific_action(id: str, service: EntityService = Depends(get_service)):
+            return service.specific_business_action(id)
 
-@router.get("/{id}", response_model=EntityResponse)
-def get_entity_by_id(id: str, service: EntityService = Depends(get_service)):
-    entity = service.get_by_id(id)
-    if not entity:
-        raise HTTPException(status_code=404, detail="Entity not found")
-    return entity
-
-# ===== CASOS DE USO ESPECÍFICOS =====
-@router.post("", response_model=EntityResponse)
-def create_entity(data: CreateRequest, service: EntityService = Depends(get_service)):
-    return service.create_entity(data.field1, data.field2)
-
-@router.patch("/{id}/specific-action", response_model=EntityResponse)
-def specific_action(id: str, service: EntityService = Depends(get_service)):
-    return service.specific_business_action(id)
+# Instanciar para registrar as rotas
+entity_controller = EntityController()
 ```
 
+**Endpoints automáticos (herdados do BaseController):**
+- `GET /entities` - Listar todos
+- `GET /entities/{id}` - Buscar por ID
+- `PUT /entities/{id}` - Atualizar
+- `DELETE /entities/{id}` - Remover
+
+**Endpoints específicos (registrados manualmente):**
+- `POST /entities` - Criar entidade
+- `PATCH /entities/{id}/specific-action` - Ação específica
+
 **Benefícios desta abordagem:**
-- **Organização**: CRUD padrão separado dos casos específicos
-- **Reutilização**: Aproveita métodos herdados do BaseAppService
-- **Clareza**: Fácil identificar o que é padrão vs específico
-- **Manutenção**: Mudanças no BaseAppService afetam todos os controllers
+- **Herança Real**: CRUD automático via BaseController
+- **Especialização**: Rotas específicas do domínio
+- **Reutilização**: Aproveita toda a funcionalidade base
+- **Manutenção**: Mudanças no BaseController afetam todos os controllers
+- **Organização**: Código limpo e bem estruturado
 
 ---
 
