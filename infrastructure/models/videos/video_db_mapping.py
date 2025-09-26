@@ -13,5 +13,3 @@ class VideoDbMapping(Base):
     status = Column(Enum(StatusDoVideo), default=StatusDoVideo.PENDENTE)
     duration = Column(Float, nullable=True)
     language = Column(String, default="pt-BR")
-
-

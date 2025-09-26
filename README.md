@@ -295,17 +295,26 @@ class VideoService(BaseAppService[Video]):
 Arquivo: `interfaces/api/schemas/video_schemas.py`
 
 ```python
+from typing import Optional
+from pydantic import BaseModel
+from domain.entities.videos.video import StatusDoVideo
+
 class VideoCreateRequest(BaseModel):
+    """Schema para criação de vídeo"""
     title: str
     source_url: str
 
 class VideoUpdateRequest(BaseModel):
+    """Schema para atualização de vídeo"""
     title: Optional[str] = None
     source_url: Optional[str] = None
     local_path: Optional[str] = None
     status: Optional[StatusDoVideo] = None
+    duration: Optional[float] = None
+    language: Optional[str] = None
 
 class VideoResponse(BaseModel):
+    """Schema para resposta de vídeo"""
     id: str
     title: str
     source_url: str
@@ -314,8 +323,10 @@ class VideoResponse(BaseModel):
     duration: Optional[float] = None
     language: str
 
-    class Config:
-        from_attributes = True
+model_config = {
+        "from_attributes": True  # Pydantic v2
+    }
+
 ```
 
 **O que você está fazendo:**
@@ -328,9 +339,31 @@ class VideoResponse(BaseModel):
 Arquivo: `interfaces/api/video_controller.py`
 
 ```python
-class VideoController(BaseController[Video, VideoCreateRequest, VideoResponse, VideoService]):
-    def __init__(self, service: VideoService):
-        super().__init__(router, service, VideoResponse, "Vídeo")
+from fastapi import APIRouter
+from infrastructure.database import SessionLocal
+from infrastructure.repositories.videos.video_repository import VideoRepository
+from interfaces.api.base_controller import BaseController
+from app.services.videos.video_service import VideoService
+from interfaces.api.schemas.video_schemas import VideoCreateRequest, VideoUpdateRequest, VideoResponse
+
+router = APIRouter()
+
+# Aqui usamos BaseController passando:
+# EntityType = ORM entity do vídeo (geralmente Video)
+# CreateUpdateModelType = VideoUpdateRequest (ou VideoCreateRequest, depende do método)
+# ResponseModelType = VideoResponse
+# ServiceType = VideoService
+session = SessionLocal()
+
+video_repository = VideoRepository(session) 
+
+video_controller = BaseController(
+    router=router,
+    service=VideoService(video_repository),
+    response_model=VideoResponse,
+    entity_name="Vídeo"
+)
+
 ```
 
 - Endpoints automáticos: `GET /videos`, `GET /videos/{id}`, `PUT /videos/{id}`, `DELETE /videos/{id}`
