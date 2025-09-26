@@ -10,6 +10,8 @@
 - **Dublagem automática** (via ElevenLabs API).
 - **Geração automática de legendas**.
 - Integração com **n8n** para workflows automatizados.
+- **Conectar diversas contas de distintas plataformas**.
+- **Postagem automática** (via integração com as plataformas).
 
 ---
 
