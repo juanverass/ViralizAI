@@ -50,6 +50,9 @@ python -m uvicorn app.main:app --reload
 
 ## 🤝 Contribuição
 
+Antes de mais nada, clique [AQUI](CONTRIBUTING.md) para ter informações sobre 
+a nossa arquitetura e como pode ser criada uma nova funcionalidade do **zero**.
+
 1. Fork o repositório
 2. Crie branch: `git checkout -b feature/nova-funcionalidade`
 3. Commit alterações: `git commit -m "Adiciona nova funcionalidade"`
