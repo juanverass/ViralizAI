@@ -339,7 +339,7 @@ model_config = {
 Arquivo: `interfaces/api/video_controller.py`
 
 ```python
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, status
 from infrastructure.database import SessionLocal
 from infrastructure.repositories.videos.video_repository import VideoRepository
 from interfaces.api.base_controller import BaseController
@@ -356,16 +356,59 @@ router = APIRouter()
 session = SessionLocal()
 
 video_repository = VideoRepository(session) 
-
+video_service = VideoService(video_repository)
 video_controller = BaseController(
     router=router,
-    service=VideoService(video_repository),
+    service= video_service,
     response_model=VideoResponse,
     entity_name="Vídeo"
 )
 
 ```
 
+**Caso seja necessário criar mais endpoints que não sejam padrão, segue o exemplo abaixo:**
+
+```python
+from fastapi import APIRouter, HTTPException, status
+from infrastructure.database import SessionLocal
+from infrastructure.repositories.videos.video_repository import VideoRepository
+from interfaces.api.base_controller import BaseController
+from app.services.videos.video_service import VideoService
+from interfaces.api.schemas.video_schemas import VideoCreateRequest, VideoUpdateRequest, VideoResponse
+
+router = APIRouter()
+
+# Aqui usamos BaseController passando:
+# EntityType = ORM entity do vídeo (geralmente Video)
+# CreateUpdateModelType = VideoUpdateRequest (ou VideoCreateRequest, depende do método)
+# ResponseModelType = VideoResponse
+# ServiceType = VideoService
+session = SessionLocal()
+
+video_repository = VideoRepository(session) 
+video_service = VideoService(video_repository)
+video_controller = BaseController(
+    router=router,
+    service= video_service,
+    response_model=VideoResponse,
+    entity_name="Vídeo"
+)
+
+@router.patch("/videos/{video_id}/mark-processing", response_model=VideoResponse)
+def mark_processing(video_id: str):
+    """
+    Marca um vídeo específico como 'Processing'.
+    """
+    video = video_service.mark_processing(video_id)
+    
+    if not video:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Vídeo não encontrado"
+        )
+    
+    return video
+```
 - Endpoints automáticos: `GET /videos`, `GET /videos/{id}`, `PUT /videos/{id}`, `DELETE /videos/{id}`
 - Endpoints específicos: `POST /videos`, `PATCH /videos/{id}/mark-processing` etc.
 

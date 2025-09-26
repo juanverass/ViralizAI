@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, status
 from infrastructure.database import SessionLocal
 from infrastructure.repositories.videos.video_repository import VideoRepository
 from interfaces.api.base_controller import BaseController
@@ -15,10 +15,10 @@ router = APIRouter()
 session = SessionLocal()
 
 video_repository = VideoRepository(session) 
-
+video_service = VideoService(video_repository)
 video_controller = BaseController(
     router=router,
-    service=VideoService(video_repository),
+    service= video_service,
     response_model=VideoResponse,
     entity_name="Vídeo"
 )
