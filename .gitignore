@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyc
 
 # C extensions
 *.so
@@ -210,11 +211,3 @@ uploads/
 downloads/
 temp/
 cache/
-app/__pycache__/main.cpython-311.pyc
-app/services/__pycache__/service_registration_block.cpython-311.pyc
-app/services/videos/__pycache__/video_service.cpython-311.pyc
-infrastructure/repositories/__pycache__/repository_registration_block.cpython-311.pyc
-infrastructure/repositories/comuns/__pycache__/base_repository.cpython-311.pyc
-infrastructure/repositories/videos/__pycache__/video_repository.cpython-311.pyc
-interfaces/api/__pycache__/router_registration_block.cpython-311.pyc
-interfaces/api/__pycache__/video_controller.cpython-311.pyc
