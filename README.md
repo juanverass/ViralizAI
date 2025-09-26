@@ -1,10 +1,5 @@
 # ViralizAI 🚀
 
-\
-\
-\
-
-
 **ViralizAI** é uma plataforma em Python para **criação automatizada de vídeos curtos (TikTok / YouTube Shorts)** usando IA. O sistema gera vídeos, dublagens e legendas automaticamente, podendo processar conteúdos via links ou prompts de texto.
 
 ---
@@ -93,7 +88,7 @@ ViralizAI/
 
 ## 📌 Tutorial Passo a Passo: Criando uma Nova Entidade
 
-Este tutorial é feito para **desenvolvedores juniores** ou novos no projeto. Aqui explicamos **cada camada, cada decisão e cada passo** para criar uma entidade e conectá-la à API.
+Este tutorial foi feito para que os novos **desenvolvedores se baseiem** ao entrar no projeto. Aqui explicamos **cada camada, cada decisão e cada passo** para criar uma entidade e conectá-la à API.
 
 ### 1️⃣ Criar a Entidade de Domínio
 
