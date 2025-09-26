@@ -1,16 +1,21 @@
 # ViralizAI 🚀
 
+\
+\
+\
+
+
 **ViralizAI** é uma plataforma em Python para **criação automatizada de vídeos curtos (TikTok / YouTube Shorts)** usando IA. O sistema gera vídeos, dublagens e legendas automaticamente, podendo processar conteúdos via links ou prompts de texto.
 
 ---
 
 ## 🌟 Funcionalidades
 
-* Criação de vídeos a partir de **prompts ou links de vídeos**.
-* **Dublagem automática** (via ElevenLabs API).
-* **Geração automática de legendas**.
-* Integração com **n8n** para workflows automatizados.
-* Arquitetura **hexagonal**, modular e testável.
+- Criação de vídeos a partir de **prompts ou links de vídeos**.
+- **Dublagem automática** (via ElevenLabs API).
+- **Geração automática de legendas**.
+- Integração com **n8n** para workflows automatizados.
+- Arquitetura **hexagonal**, modular e testável.
 
 ---
 
@@ -49,13 +54,13 @@
 
 ## 🛠 Tecnologias
 
-* Python 3.11+
-* FastAPI
-* SQLAlchemy
-* Requests / HTTPX
-* ElevenLabs API
-* n8n
-* pytest
+- Python 3.11+
+- FastAPI
+- SQLAlchemy
+- Requests / HTTPX
+- ElevenLabs API
+- n8n
+- pytest
 
 ---
 
@@ -129,9 +134,9 @@ class Video:
 
 **O que você está fazendo:**
 
-* Define os dados essenciais do vídeo.
-* Define o status atual do vídeo.
-* Mantém o domínio **puro**, sem dependência de banco ou frameworks.
+- Define os dados essenciais do vídeo.
+- Define o status atual do vídeo.
+- Mantém o domínio **puro**, sem dependência de banco ou frameworks.
 
 ### 2️⃣ Criar o Modelo ORM
 
@@ -159,8 +164,8 @@ class VideoDbMapping(Base):
 
 **O que você está fazendo:**
 
-* Define como o vídeo será salvo no banco.
-* Isola as regras de persistência, mantendo a entidade independente.
+- Define como o vídeo será salvo no banco.
+- Isola as regras de persistência, mantendo a entidade independente.
 
 ### 3️⃣ Criar o Mapper
 
@@ -202,8 +207,8 @@ class VideoPersistenceMapper:
 
 **O que você está fazendo:**
 
-* Cria a ponte entre domínio e banco.
-* Permite trocar ORM ou banco sem afetar o domínio.
+- Cria a ponte entre domínio e banco.
+- Permite trocar ORM ou banco sem afetar o domínio.
 
 ### 4️⃣ Criar o Repository Port (Contrato)
 
@@ -222,8 +227,8 @@ class VideoRepositoryPort(BaseRepositoryPort[Video]):
 
 **O que você está fazendo:**
 
-* Define o contrato, sem implementação.
-* Permite mudar a implementação sem quebrar o domínio.
+- Define o contrato, sem implementação.
+- Permite mudar a implementação sem quebrar o domínio.
 
 ### 5️⃣ Criar o Repository (Implementação)
 
@@ -249,9 +254,9 @@ class VideoRepository(BaseRepository[Video, VideoDbMapping], VideoRepositoryPort
 
 **O que você está fazendo:**
 
-* Herda CRUD genérico do BaseRepository.
-* Conecta Mapper e ORM.
-* Não coloca regras de negócio aqui (isso é responsabilidade do Service).
+- Herda CRUD genérico do BaseRepository.
+- Conecta Mapper e ORM.
+- Não coloca regras de negócio aqui (isso é responsabilidade do Service).
 
 ### 6️⃣ Criar o App Service
 
@@ -281,9 +286,9 @@ class VideoService(BaseAppService[Video]):
 
 **O que você está fazendo:**
 
-* Recebe repositório via dependência.
-* Usa CRUD genérico e adiciona casos de uso específicos.
-* Mantém separação de responsabilidades.
+- Recebe repositório via dependência.
+- Usa CRUD genérico e adiciona casos de uso específicos.
+- Mantém separação de responsabilidades.
 
 ### 7️⃣ Criar os Schemas Pydantic
 
@@ -315,8 +320,8 @@ class VideoResponse(BaseModel):
 
 **O que você está fazendo:**
 
-* Define dados válidos de entrada e saída.
-* Garante documentação automática (Swagger).
+- Define dados válidos de entrada e saída.
+- Garante documentação automática (Swagger).
 
 ### 8️⃣ Criar o Controller
 
@@ -328,33 +333,33 @@ class VideoController(BaseController[Video, VideoCreateRequest, VideoResponse, V
         super().__init__(router, service, VideoResponse, "Vídeo")
 ```
 
-* Endpoints automáticos: `GET /videos`, `GET /videos/{id}`, `PUT /videos/{id}`, `DELETE /videos/{id}`
-* Endpoints específicos: `POST /videos`, `PATCH /videos/{id}/mark-processing` etc.
+- Endpoints automáticos: `GET /videos`, `GET /videos/{id}`, `PUT /videos/{id}`, `DELETE /videos/{id}`
+- Endpoints específicos: `POST /videos`, `PATCH /videos/{id}/mark-processing` etc.
 
 ### 9️⃣ Registrar nos Blocks
 
-* **RepositoryRegistrationBlock**: instancia repositórios.
-* **ServiceRegistrationBlock**: instancia services usando repositórios.
-* **RouterRegistrationBlock**: registra routers na aplicação FastAPI.
+- **RepositoryRegistrationBlock**: instancia repositórios.
+- **ServiceRegistrationBlock**: instancia services usando repositórios.
+- **RouterRegistrationBlock**: registra routers na aplicação FastAPI.
 
 ### 10️⃣ Resultado Final
 
 Após seguir o passo a passo:
 
-* Entidade: `Video`
-* Mapper: `VideoPersistenceMapper`
-* Repository: `VideoRepository`
-* Service: `VideoService`
-* Controller: `VideoController`
-* Schemas: `VideoCreateRequest`, `VideoUpdateRequest`, `VideoResponse`
+- Entidade: `Video`
+- Mapper: `VideoPersistenceMapper`
+- Repository: `VideoRepository`
+- Service: `VideoService`
+- Controller: `VideoController`
+- Schemas: `VideoCreateRequest`, `VideoUpdateRequest`, `VideoResponse`
 
 **Endpoints disponíveis:**
 
-* `POST /videos`
-* `GET /videos`
-* `GET /videos/{id}`
-* `PUT /videos/{id}`
-* `DELETE /videos/{id}`
+- `POST /videos`
+- `GET /videos`
+- `GET /videos/{id}`
+- `PUT /videos/{id}`
+- `DELETE /videos/{id}`
 
 ---
 
@@ -388,3 +393,4 @@ python -m uvicorn app.main:app --reload
 3. Commit alterações: `git commit -m "Adiciona nova funcionalidade"`
 4. Push: `git push origin feature/nova-funcionalidade`
 5. Abra Pull Request
+
