@@ -26,5 +26,6 @@ class VideoResponse(BaseModel):
     duration: Optional[float] = None
     language: str
 
-    class Config:
-        from_attributes = True
+model_config = {
+        "from_attributes": True  # Pydantic v2
+    }

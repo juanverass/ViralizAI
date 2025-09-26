@@ -1,5 +1,5 @@
 from typing import Generic, TypeVar, List, Optional
-from domain.repositories.base_repository_port import RepositoryPort
+from domain.repositories.base_repository_port import BaseRepositoryPort
 
 EntityType = TypeVar('EntityType')
 
@@ -7,7 +7,7 @@ EntityType = TypeVar('EntityType')
 class BaseAppService(Generic[EntityType]):
     """Service base com operações CRUD padronizadas para casos de uso comuns."""
 
-    def __init__(self, repository: RepositoryPort[EntityType]):
+    def __init__(self, repository: BaseRepositoryPort[EntityType]):
         self._repository = repository
 
     # Create

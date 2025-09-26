@@ -11,7 +11,7 @@ class VideoPersistenceMapper:
             title=entity.title,
             source_url=entity.source_url,
             local_path=entity.local_path,
-            status=entity.status,
+            status=entity.status.value,
             duration=entity.duration,
             language=entity.language
         )
@@ -23,7 +23,7 @@ class VideoPersistenceMapper:
             title=model.title,
             source_url=model.source_url,
             local_path=model.local_path,
-            status=StatusDoVideo(model.status.value),
+            status=model.status,
             duration=model.duration,
             language=model.language
         )

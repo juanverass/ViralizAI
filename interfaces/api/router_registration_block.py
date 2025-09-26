@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from interfaces.api import video_controller
+from interfaces.api.video_controller import video_controller
 
 class RouterRegistrationBlock:
     def __init__(self):

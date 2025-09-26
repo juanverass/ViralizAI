@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from app.services.service_registration_block import ServiceRegistrationBlock
 from infrastructure.database import Base, engine, SessionLocal, create_database_if_not_exists
+from infrastructure.mappers.videos.video_persistence_mapper import VideoPersistenceMapper
+from infrastructure.models.videos.video_db_mapping import VideoDbMapping
 from infrastructure.repositories.repository_registration_block import RepositoryRegistrationBlock
 from interfaces.api.router_registration_block import RouterRegistrationBlock
 
@@ -15,7 +17,7 @@ def create_app() -> FastAPI:
 
     # Criação da sessão do banco
     session = SessionLocal()
-    
+
     # Registro dos repositórios (implementações concretas)
     repositories = RepositoryRegistrationBlock(session)
     

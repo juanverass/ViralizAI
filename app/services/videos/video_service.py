@@ -1,6 +1,6 @@
 from typing import Optional
 from domain.entities.videos.video import Video, StatusDoVideo
-from domain.repositories.video_repository_port import _repository
+from domain.repositories.video_repository_port import VideoRepositoryPort as _repository
 from app.services.base_app_service import BaseAppService
 
 class VideoService(BaseAppService[Video]):
