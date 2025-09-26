@@ -1,7 +1,9 @@
 from domain.entities.videos.video import StatusDoVideo, Video
 from infrastructure.models.videos.video_db_mapping import VideoDbMapping
 
-class VideoMapper:
+class VideoPersistenceMapper:
+    """Mapper entre Video (domínio) e VideoDbMapping (ORM)"""
+    
     @staticmethod
     def to_model(entity: Video) -> VideoDbMapping:
         return VideoDbMapping(

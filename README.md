@@ -92,15 +92,7 @@ ViralizAI/
 
 ## 📌 Tutorial: Criando uma Nova Entidade
 
-Este tutorial mostra como criar uma nova entidade seguindo a arquitetura hexagonal do ViralizAI. Usaremos **Usuario** como exemplo.
-
-> **💡 O que é Arquitetura Hexagonal?**
-> 
-> A arquitetura hexagonal (também conhecida como Ports and Adapters) separa o código em camadas bem definidas:
-> - **Domain**: Regras de negócio puras (entidades, enums, contratos)
-> - **Application**: Casos de uso e orquestração (services)
-> - **Infrastructure**: Implementações técnicas (banco, APIs externas)
-> - **Interfaces**: Pontos de entrada (API REST, CLI, etc.)
+Este tutorial serve como guia completo para entender como o CRUD de qualquer entidade funciona na arquitetura hexagonal do projeto, camada por camada. Ele é pensado para desenvolvedores juniores ou qualquer pessoa que entre no projeto, garantindo clareza sobre responsabilidades, fluxo de dados e boas práticas. No exemplo a seguir utilizaremos a entidade **Video**.
 
 ### 1️⃣ **Criar a Entidade de Domínio**
 
@@ -112,38 +104,27 @@ A entidade de domínio é o coração da aplicação. Ela contém:
 - **Enums**: Estados possíveis
 - **Factory Methods**: Métodos para criar instâncias
 
-Crie o arquivo `domain/entities/usuarios/usuario.py`:
+Crie o arquivo `domain/entities/videos/video.py`:
 
 ```python
-from dataclasses import dataclass
-from enum import Enum
-from typing import Optional
-import uuid
-
-class StatusUsuario(Enum):
-    ATIVO = "Ativo"
-    INATIVO = "Inativo"
-    BLOQUEADO = "Bloqueado"
-
 @dataclass
-class Usuario:
+class Video:
     id: str
-    nome: str
-    email: str
-    telefone: Optional[str] = None
-    status: StatusUsuario = StatusUsuario.ATIVO
-    data_criacao: Optional[str] = None
-
-    @staticmethod
-    def create_new(nome: str, email: str) -> "Usuario":
-        return Usuario(
-            id=str(uuid.uuid4()),
-            nome=nome,
-            email=email
-        )
+    title: str
+    source_url: str
+    local_path: Optional[str] = None
+    status: StatusDoVideo = StatusDoVideo.PENDENTE
 ```
+**O que você está fazendo:**
+- Está definindo o que é um vídeo no seu sistema, com seus atributos principais.
+- id, title, source_url são dados que importam para você identificar e trabalhar com o vídeo.
+- status indica se o vídeo está processando, pronto ou falhou.
+- Por que é importante: isso é a "regra do negócio". O restante da aplicação deve usar isso, não o banco ou DTOs.
 
-### 2️⃣ **Criar o Mapeamento de Banco**
+Resumo: A entidade **não depende de nada externo**, só do seu conceito de vídeo.
+
+
+### 2️⃣ **Criar o Mapeamento de Banco (Modelo ORM)**
 
 > **🎯 Objetivo**: Criar a representação da entidade no banco de dados.
 
@@ -155,25 +136,23 @@ O mapeamento de banco é responsável por:
 
 > **⚠️ Importante**: Esta camada está na **Infrastructure** porque depende de tecnologia específica (SQLAlchemy).
 
-Crie o arquivo `infrastructure/models/usuarios/usuario_db_mapping.py`:
+Crie o arquivo `infrastructure/models/videos/video_db_mapping.py`:
 
 ```python
-from sqlalchemy import Column, String, Enum, DateTime
-from infrastructure.database import Base
-from domain.entities.usuarios.usuario import StatusUsuario
+class VideoDbMapping(Base):
+    id = Column(String(36), primary_key=True)
+    title = Column(String, nullable=False)
+    source_url = Column(String, nullable=False)
+    status = Column(Enum(StatusDoVideo), default=StatusDoVideo.PENDENTE)
 
-class UsuarioDbMapping(Base):
-    __tablename__ = "usuarios"
-
-    id = Column(String(36), primary_key=True, index=True)
-    nome = Column(String, nullable=False)
-    email = Column(String, nullable=False, unique=True)
-    telefone = Column(String, nullable=True)
-    status = Column(Enum(StatusUsuario), default=StatusUsuario.ATIVO)
-    data_criacao = Column(DateTime, nullable=True)
 ```
+**O que você está fazendo:**
 
-### 3️⃣ **Criar o Mapper**
+- Está definindo como esse vídeo vai ser salvo no banco de dados.
+- Aqui você diz que id é uma chave primária, title é obrigatório, etc.
+- **Por que é separado:** se você mudar de banco, **não precisa mudar a entidade**
+
+### 3️⃣ **Criar o Mapper (esse passo confunde a maioria)**
 
 > **🎯 Objetivo**: Criar a ponte entre a entidade de domínio e o mapeamento de banco.
 
@@ -184,39 +163,56 @@ O mapper é responsável por:
 - **Bidirecional**: Funciona nos dois sentidos (to_model e to_entity)
 
 > **💡 Por que precisamos do Mapper?**
-> 
+>
+> - A entidade (Video) é a forma como pensamos no negócio.
+> - O modelo ORM (VideoDbMapping) é a forma como o banco entende.
+> - O Mapper é o tradutor entre essas duas formas. Ele pega um vídeo do domínio e transforma em algo que o banco entende, ou pega um registro do banco e transforma de volta em uma entidade que a aplicação entende.
+
+> **to_model**
+>
+> - Entrada: Entidade (Video)
+> - Saída: Modelo ORM (VideoDbMapping)
+> - Exemplo prático: você quer salvar um vídeo no banco.
+>    - Você tem o vídeo no formato do domínio.
+>    - to_model pega ele e cria um objeto que SQLAlchemy sabe salvar.
+
+> **to_entity**
+>
+> - Entrada: Modelo ORM (VideoDbMapping)
+> - Saída: Entidade (Video)
+> - Exemplo prático: você acabou de buscar um vídeo no banco.
+>    - SQLAlchemy te dá um VideoDbMapping.
+>    - to_entity transforma em Video para a aplicação usar sem se preocupar com SQL.
+
+> **Resumo simples:** Mapper = tradutor entre o “idioma” do negócio e o “idioma” do banco.
+> - Sem ele, você teria que colocar lógica de banco dentro do seu domínio ou lógica de negócio dentro do SQLAlchemy.
+> - Isso mistura responsabilidades e é ruim para manutenção. 
+
 > O domínio não deve conhecer detalhes de implementação. O mapper permite que:
 > - A entidade permaneça "pura" (sem dependências de SQLAlchemy)
 > - Possamos trocar de ORM sem afetar o domínio
 > - O código seja mais testável e flexível
 
-Crie o arquivo `infrastructure/mappers/usuarios/usuario_mapper.py`:
+Crie o arquivo `infrastructure/mappers/videos/video_persistence_mapper.py`:
 
 ```python
-from domain.entities.usuarios.usuario import StatusUsuario, Usuario
-from infrastructure.models.usuarios.usuario_db_mapping import UsuarioDbMapping
-
-class UsuarioMapper:
+class VideoPersistenceMapper:
     @staticmethod
-    def to_model(entity: Usuario) -> UsuarioDbMapping:
-        return UsuarioDbMapping(
+    def to_model(entity: Video) -> VideoDbMapping:
+        return VideoDbMapping(
             id=entity.id,
-            nome=entity.nome,
-            email=entity.email,
-            telefone=entity.telefone,
-            status=entity.status,
-            data_criacao=entity.data_criacao
+            title=entity.title,
+            source_url=entity.source_url,
+            status=entity.status
         )
 
     @staticmethod
-    def to_entity(model: UsuarioDbMapping) -> Usuario:
-        return Usuario(
+    def to_entity(model: VideoDbMapping) -> Video:
+        return Video(
             id=model.id,
-            nome=model.nome,
-            email=model.email,
-            telefone=model.telefone,
-            status=StatusUsuario(model.status.value),
-            data_criacao=model.data_criacao
+            title=model.title,
+            source_url=model.source_url,
+            status=model.status
         )
 ```
 
@@ -238,20 +234,11 @@ O Repository Port é um **contrato** que define:
 
 > **🔧 Protocol vs Interface**: Em Python, usamos `Protocol` que funciona como interface, mas com duck typing.
 
-Crie o arquivo `domain/repositories/usuario_repository_port.py`:
+Crie o arquivo `domain/repositories/video_repository_port.py`:
 
 ```python
-from typing import Protocol, Optional, List
-from domain.entities.usuarios.usuario import Usuario
-
-class UsuarioRepositoryPort(Protocol):
-    """Contrato para repositório de usuários"""
-    
-    def add(self, entity: Usuario) -> Usuario: ...
-    def get_all(self) -> List[Usuario]: ...
-    def get_by_id(self, id_entity: str) -> Optional[Usuario]: ...
-    def update(self, entity: Usuario) -> Usuario: ...
-    def delete(self, id_entity: str) -> None: ...
+class VideoRepositoryPort(BaseRepositoryPort[Video]):
+    """Contrato para repositório de vídeos"""  
 ```
 
 ### 5️⃣ **Criar o Repository (Implementação)**
@@ -268,8 +255,8 @@ O Repository é a **implementação concreta** que:
 > 
 > ```
 > UsuarioRepository
-> ├── BaseRepository[Usuario, UsuarioDbMapping]  # CRUD genérico
-> └── UsuarioRepositoryPort                       # Contrato do domínio
+> ├── BaseRepository[Video, VideoDbMapping]  # CRUD genérico
+> └── VideoRepository                       # Contrato do domínio
 > ```
 > 
 > **Benefícios:**
@@ -278,22 +265,14 @@ O Repository é a **implementação concreta** que:
 > - **Flexibilidade**: Pode adicionar métodos específicos
 > - **Testabilidade**: Fácil de mockar para testes
 
-Crie o arquivo `infrastructure/repositories/usuarios/usuario_repository.py`:
+Crie o arquivo `infrastructure/repositories/videos/video_repository.py`:
 
 ```python
-from typing import Optional
-from sqlalchemy.orm import Session
-from domain.entities.usuarios.usuario import Usuario, StatusUsuario
-from domain.repositories.usuario_repository_port import UsuarioRepositoryPort
-from infrastructure.mappers.usuarios.usuario_mapper import UsuarioMapper
-from infrastructure.models.usuarios.usuario_db_mapping import UsuarioDbMapping
-from infrastructure.repositories.comuns.base_repository import BaseRepository
-
-class UsuarioRepository(BaseRepository[Usuario, UsuarioDbMapping], UsuarioRepositoryPort):
-    """Implementação do repositório de usuários usando SQLAlchemy"""
+class VideoRepository(BaseRepository[Video, VideoDbMapping], VideoRepositoryPort):
+    """Implementação do repositório de vídeos usando SQLAlchemy"""
     
     def __init__(self, session: Session):
-        super().__init__(session, UsuarioDbMapping, UsuarioMapper)
+        super().__init__(session, VideoDbMapping, VideoPersistenceMapper)
     
     # ❌ NÃO coloque métodos específicos de negócio aqui!
     # O Repository deve ser genérico e focado apenas em persistência
@@ -313,8 +292,8 @@ O App Service é responsável por:
 > **🏗️ Arquitetura do Service:**
 > 
 > ```
-> UsuarioService
-> ├── BaseAppService[Usuario]           # CRUD padrão herdado
+> VideoService
+> ├── BaseAppService[Video]           # CRUD padrão herdado
 > └── Métodos específicos do domínio    # Regras de negócio
 > ```
 > 
@@ -344,52 +323,19 @@ O App Service é responsável por:
 > - ✅ Casos de uso específicos
 > - ✅ Aplicação de regras antes de persistir
 
-Crie o arquivo `app/services/usuarios/usuario_service.py`:
+Crie o arquivo `app/services/videos/video_service.py`:
 
 ```python
-from typing import Optional
-from domain.entities.usuarios.usuario import Usuario, StatusUsuario
-from domain.repositories.usuario_repository_port import UsuarioRepositoryPort
-from app.services.base_app_service import BaseAppService
-
-class UsuarioService(BaseAppService[Usuario]):
-    """Serviço de usuários - casos de uso específicos do domínio"""
+class VideoService(BaseAppService[Video]):
+    """Serviço de vídeos - casos de uso específicos do domínio"""
     
-    def __init__(self, repository: UsuarioRepositoryPort):
+    def __init__(self, repository: _repository):
         super().__init__(repository)
 
-    def create_usuario(self, nome: str, email: str) -> Usuario:
-        """Cria um novo usuário"""
-        usuario = Usuario.create_new(nome, email)
-        return self.add(usuario)
-
-    def block_usuario(self, usuario_id: str) -> Optional[Usuario]:
-        """Bloqueia um usuário - regra de negócio específica"""
-        usuario = self.get_by_id(usuario_id)
-        if not usuario:
-            return None
-        
-        # Aplicar regra de negócio: só pode bloquear usuário ativo
-        if usuario.status != StatusUsuario.ATIVO:
-            raise ValueError("Apenas usuários ativos podem ser bloqueados")
-        
-        # Alterar status e persistir
-        usuario.status = StatusUsuario.BLOQUEADO
-        return self.update(usuario)
-
-    def activate_usuario(self, usuario_id: str) -> Optional[Usuario]:
-        """Ativa um usuário - regra de negócio específica"""
-        usuario = self.get_by_id(usuario_id)
-        if not usuario:
-            return None
-        
-        # Aplicar regra de negócio: só pode ativar usuário inativo
-        if usuario.status not in [StatusUsuario.INATIVO, StatusUsuario.BLOQUEADO]:
-            raise ValueError("Apenas usuários inativos ou bloqueados podem ser ativados")
-        
-        # Alterar status e persistir
-        usuario.status = StatusUsuario.ATIVO
-        return self.update(usuario)
+    def create_video(self, title: str, source_url: str) -> Video:
+        """Cria um novo vídeo"""
+        video = Video.create_new(title, source_url)
+        return  _repository.add(video)
 ```
 
 ### 7️⃣ **Criar os Schemas Pydantic**
@@ -415,37 +361,36 @@ Os Schemas Pydantic são responsáveis por:
 > - **Validação**: Regras específicas para cada operação
 > - **Evolução**: Mudanças em um schema não afetam outros
 
-Crie o arquivo `interfaces/api/schemas/usuario_schemas.py`:
+Crie o arquivo `interfaces/api/schemas/video_schemas.py`:
 
 ```python
-from typing import Optional
-from pydantic import BaseModel
-from domain.entities.usuarios.usuario import StatusUsuario
+class VideoCreateRequest(BaseModel):
+    """Schema para criação de vídeo"""
+    title: str
+    source_url: str
 
-class UsuarioCreateRequest(BaseModel):
-    """Schema para criação de usuário"""
-    nome: str
-    email: str
-    telefone: Optional[str] = None
+class VideoUpdateRequest(BaseModel):
+    """Schema para atualização de vídeo"""
+    title: Optional[str] = None
+    source_url: Optional[str] = None
+    local_path: Optional[str] = None
+    status: Optional[StatusDoVideo] = None
+    duration: Optional[float] = None
+    language: Optional[str] = None
 
-class UsuarioUpdateRequest(BaseModel):
-    """Schema para atualização de usuário"""
-    nome: Optional[str] = None
-    email: Optional[str] = None
-    telefone: Optional[str] = None
-    status: Optional[StatusUsuario] = None
-
-class UsuarioResponse(BaseModel):
-    """Schema para resposta de usuário"""
+class VideoResponse(BaseModel):
+    """Schema para resposta de vídeo"""
     id: str
-    nome: str
-    email: str
-    telefone: Optional[str] = None
-    status: StatusUsuario
-    data_criacao: Optional[str] = None
+    title: str
+    source_url: str
+    local_path: Optional[str] = None
+    status: StatusDoVideo
+    duration: Optional[float] = None
+    language: str
 
     class Config:
         from_attributes = True
+
 ```
 
 ### 8️⃣ **Criar o Controller**
@@ -461,7 +406,7 @@ O Controller é responsável por:
 > **🏗️ Estrutura do Controller:**
 > 
 > ```
-> UsuarioController
+> VideoController
 > ├── Endpoints CRUD padrão        # GET, POST, PUT, DELETE
 > ├── Validação de entrada         # Schemas Pydantic
 > ├── Tratamento de erros         # HTTPException
@@ -470,11 +415,11 @@ O Controller é responsável por:
 
 > **💡 Padrões de Endpoint:**
 > 
-> - **POST /usuarios**: Criar novo usuário
-> - **GET /usuarios**: Listar todos os usuários
-> - **GET /usuarios/{id}**: Buscar usuário específico
-> - **PUT /usuarios/{id}**: Atualizar usuário completo
-> - **DELETE /usuarios/{id}**: Remover usuário
+> - **POST /usuarios**: Criar novo video
+> - **GET /usuarios**: Listar todos os videos
+> - **GET /usuarios/{id}**: Buscar video específico
+> - **PUT /usuarios/{id}**: Atualizar video completo
+> - **DELETE /usuarios/{id}**: Remover video
 
 > **🔧 Injeção de Dependência:**
 > 
@@ -483,74 +428,80 @@ O Controller é responsável por:
 > - **Reutilização**: Mesmo service usado em múltiplos endpoints
 > - **Configuração**: Centralizada no `main.py`
 
-Crie o arquivo `interfaces/api/usuario_controller.py`:
+Crie o arquivo `interfaces/api/video_controller.py`:
 
 ```python
-from fastapi import APIRouter, Depends, Request, HTTPException, status
-from typing import List
-from app.services.service_registration_block import ServiceRegistrationBlock
-from app.services.usuarios.usuario_service import UsuarioService
-from interfaces.api.schemas.usuario_schemas import UsuarioCreateRequest, UsuarioUpdateRequest, UsuarioResponse
-from domain.entities.usuarios.usuario import Usuario
-from interfaces.api.base_controller import BaseController
-
 router = APIRouter()
 
 def get_services(request: Request) -> ServiceRegistrationBlock:
     return request.app.state.services
 
-def get_usuario_service(services: ServiceRegistrationBlock = Depends(get_services)) -> UsuarioService:
-    return services.usuario_service
+def get_video_service(services: ServiceRegistrationBlock = Depends(get_services)) -> VideoService:
+    return services.video_service
 
 # ===== HERANÇA DO BASE CONTROLLER =====
-class UsuarioController(BaseController[Usuario, UsuarioService]):
-    """Controller de usuários com herança do BaseController"""
+class VideoController(BaseController[Video, VideoService]):
+    """Controller de vídeos com herança do BaseController"""
     
     def __init__(self):
-        super().__init__(router, get_usuario_service(), "Usuário")
+        super().__init__(router, get_video_service(), "Vídeo")
         self._register_specific_routes()
     
     def _register_specific_routes(self):
-        """Registra rotas específicas do domínio de usuários"""
+        """Registra rotas específicas do domínio de vídeos"""
         
-        @self.router.post("", response_model=UsuarioResponse)
-        def create_usuario(
-            usuario_data: UsuarioCreateRequest,
-            usuario_service: UsuarioService = Depends(get_usuario_service)
+        @self.router.post("", response_model=VideoResponse)
+        def create_video(
+            video_data: VideoCreateRequest,
+            video_service: VideoService = Depends(get_video_service)
         ):
-            """Cria um novo usuário"""
-            return usuario_service.create_usuario(usuario_data.nome, usuario_data.email)
+            """Cria um novo vídeo"""
+            return video_service.create_video(video_data.title, video_data.source_url)
         
-        @self.router.patch("/{usuario_id}/block", response_model=UsuarioResponse)
-        def block_usuario(
-            usuario_id: str,
-            usuario_service: UsuarioService = Depends(get_usuario_service)
+        @self.router.patch("/{video_id}/mark-processing", response_model=VideoResponse)
+        def mark_processing(
+            video_id: str,
+            video_service: VideoService = Depends(get_video_service)
         ):
-            """Bloqueia um usuário"""
-            usuario = usuario_service.block_usuario(usuario_id)
-            if not usuario:
+            """Marca vídeo como processando"""
+            video = video_service.mark_processing(video_id)
+            if not video:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Usuário não encontrado"
+                    detail="Vídeo não encontrado"
                 )
-            return usuario
+            return video
 
-        @self.router.patch("/{usuario_id}/activate", response_model=UsuarioResponse)
-        def activate_usuario(
-            usuario_id: str,
-            usuario_service: UsuarioService = Depends(get_usuario_service)
+        @self.router.patch("/{video_id}/mark-ready", response_model=VideoResponse)
+        def mark_ready(
+            video_id: str,
+            video_service: VideoService = Depends(get_video_service)
         ):
-            """Ativa um usuário"""
-            usuario = usuario_service.activate_usuario(usuario_id)
-            if not usuario:
+            """Marca vídeo como pronto"""
+            video = video_service.mark_ready(video_id)
+            if not video:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Usuário não encontrado"
+                    detail="Vídeo não encontrado"
                 )
-            return usuario
+            return video
+
+        @self.router.patch("/{video_id}/mark-failed", response_model=VideoResponse)
+        def mark_failed(
+            video_id: str,
+            video_service: VideoService = Depends(get_video_service)
+        ):
+            """Marca vídeo como falhou"""
+            video = video_service.mark_failed(video_id)
+            if not video:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Vídeo não encontrado"
+                )
+            return video
 
 # Instanciar o controller para registrar as rotas
-usuario_controller = UsuarioController()
+video_controller = VideoController()
 ```
 
 ### 9️⃣ **Registrar nos Blocks**
@@ -582,21 +533,13 @@ Os Registration Blocks são responsáveis por:
 
 **RepositoryRegistrationBlock** (`infrastructure/repositories/repository_registration_block.py`):
 ```python
-from infrastructure.repositories.videos.video_repository import VideoRepository
-from infrastructure.repositories.usuarios.usuario_repository import UsuarioRepository
-
 class RepositoryRegistrationBlock:
     def __init__(self, session):
         self.videos = VideoRepository(session)
-        self.usuarios = UsuarioRepository(session)
 ```
 
 **ServiceRegistrationBlock** (`app/services/service_registration_block.py`):
-```python
-from app.services.videos.video_service import VideoService
-from app.services.usuarios.usuario_service import UsuarioService
-from infrastructure.repositories.repository_registration_block import RepositoryRegistrationBlock
-
+```python 
 class ServiceRegistrationBlock:
     def __init__(self, repositories: RepositoryRegistrationBlock):
         self.video_service = VideoService(repositories.videos)
@@ -604,15 +547,11 @@ class ServiceRegistrationBlock:
 ```
 
 **RouterRegistrationBlock** (`interfaces/api/router_registration_block.py`):
-```python
-from fastapi import FastAPI
-from interfaces.api import video_controller, usuario_controller
-
+```python 
 class RouterRegistrationBlock:
     def __init__(self):
         self.routers = [
             (video_controller.router, "/videos", ["Vídeos"]),
-            (usuario_controller.router, "/usuarios", ["Usuários"]),
         ]
 
     def register_all(self, app: FastAPI):
@@ -624,19 +563,19 @@ class RouterRegistrationBlock:
 
 Após seguir este tutorial, você terá:
 
-- **Entidade**: `Usuario` com regras de domínio
-- **Mapeamento**: `UsuarioDbMapping` para persistência
-- **Repository**: `UsuarioRepository` com CRUD completo
-- **Service**: `UsuarioService` com casos de uso
+- **Entidade**: `Video` com regras de domínio
+- **Mapeamento**: `VideoDbMapping` para persistência
+- **Repository**: `VideoRepository` com CRUD completo
+- **Service**: `VideoService` com casos de uso
 - **Controller**: Endpoints REST completos
 - **Schemas**: Validação de entrada/saída
 
 **Endpoints disponíveis:**
-- `POST /usuarios` - Criar usuário
-- `GET /usuarios` - Listar todos
-- `GET /usuarios/{id}` - Buscar por ID
-- `PUT /usuarios/{id}/block` - Bloquear usuário
-- `PUT /usuarios/{id}/activate` - Ativar usuário
+- `POST /videos` - Criar usuário
+- `GET /videos` - Listar todos
+- `GET /videos/{id}` - Buscar por ID
+- `PUT /videos/{id}/block` - Bloquear usuário
+- `PUT /videos/{id}/activate` - Ativar usuário
 
 ---
 
@@ -646,10 +585,10 @@ Após seguir este tutorial, você terá:
 
 | Camada | Responsabilidade | Exemplo |
 |--------|------------------|---------|
-| **Domain** | Regras de negócio puras | `Usuario`, `StatusUsuario`, `UsuarioRepositoryPort` |
-| **Application** | Casos de uso e orquestração | `UsuarioService` |
-| **Infrastructure** | Implementações técnicas | `UsuarioRepository`, `UsuarioDbMapping`, `UsuarioMapper` |
-| **Interfaces** | Pontos de entrada | `UsuarioController`, `UsuarioSchemas` |
+| **Domain** | Regras de negócio puras | `Video`, `StatusDoVideo`, `VideoRepositoryPort` |
+| **Application** | Casos de uso e orquestração | `VideoService` |
+| **Infrastructure** | Implementações técnicas | `VideoRepository`, `Video`, `VideoPersistenceMapper` |
+| **Interfaces** | Pontos de entrada | `VideoController`, `VideoSchemas` |
 
 ### **🔄 Fluxo de Dados:**
 
