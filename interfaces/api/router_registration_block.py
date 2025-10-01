@@ -8,6 +8,7 @@ class RouterRegistrationBlock:
         self.routers = [
             (video_controller.router, "/videos", ["Vídeos"]),
             (conta_controller.router, "/contas", ["Contas"]),
+            (conta_controller.router, "/postagensagendadas", ["Postagens Agendadas"]),
             # (legenda_router.router, "/legendas", ["Legendas"]),
             # (dublagem_router.router, "/dublagens", ["Dublagens"]),
         ]
