@@ -3,7 +3,7 @@ from infrastructure.database import SessionLocal
 from infrastructure.repositories.videos.video_repository import VideoRepository
 from interfaces.api.base_controller import BaseController
 from app.services.videos.video_service import VideoService
-from interfaces.api.schemas.video_schemas import VideoCreateRequest, VideoUpdateRequest, VideoResponse
+from interfaces.api.schemas.video_schemas import VideoCreateRequest, VideoUpdateRequest, VideoResponse, GenerateVideoRequest
 
 router = APIRouter()
 
@@ -22,3 +22,10 @@ video_controller = BaseController(
     response_model=VideoResponse,
     entity_name="Vídeo"
 )
+
+@router.post("/createVideoByRoteiro")
+async def create_video_by_roteiro(request: GenerateVideoRequest):
+    resultado = video_service.create_video_by_roteiro(
+        roteiro=request.roteiro 
+    )
+    return {"status": "sucesso", "data": resultado}

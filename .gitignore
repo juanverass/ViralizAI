@@ -117,3 +117,4 @@ htmlcov/
 # Ignore any cache folders just in case
 __pycache__/
 *.pyc
+.env

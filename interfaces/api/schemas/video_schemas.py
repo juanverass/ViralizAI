@@ -2,6 +2,9 @@ from typing import Optional
 from pydantic import BaseModel
 from domain.entities.videos.video import StatusDoVideo
 
+class GenerateVideoRequest(BaseModel):
+    roteiro: str
+
 class VideoCreateRequest(BaseModel):
     """Schema para criação de vídeo"""
     title: str
